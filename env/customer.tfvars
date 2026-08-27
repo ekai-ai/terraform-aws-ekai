@@ -48,8 +48,12 @@ eks_cluster_name = "ekai-eks"
 
 # VPC CIDR + its subnets. Defaults are large enough for this stack; only
 # change these if they'd conflict with a network you're peering/connecting to.
+# public_subnet_cidrs and private_subnet_cidrs must have the SAME number of
+# entries: the ALB (ArgoCD, app ingress) only ever attaches to the AZs
+# public_subnet_cidrs covers, so an extra private-subnet AZ would place nodes
+# where the ALB can never route to them (Target.NotInUse -> 503).
 vpc_cidr             = "172.16.0.0/20"
-public_subnet_cidrs  = ["172.16.4.0/26", "172.16.8.0/26"]                     # ALB/NAT gateway
+public_subnet_cidrs  = ["172.16.4.0/26", "172.16.8.0/26", "172.16.0.0/26"]    # ALB/NAT gateway
 private_subnet_cidrs = ["172.16.12.0/26", "172.16.14.0/26", "172.16.15.0/26"] # EKS nodes + RDS
 # cluster_version = "1.32"   # uncomment to pin a specific version, otherwise AWS uses latest
 

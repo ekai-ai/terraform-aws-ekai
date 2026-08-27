@@ -145,6 +145,10 @@ variable "public_subnet_cidrs" {
 variable "private_subnet_cidrs" {
   description = "CIDR blocks for private subnets"
   type        = list(string)
+  validation {
+    condition     = length(var.private_subnet_cidrs) == length(var.public_subnet_cidrs)
+    error_message = "private_subnet_cidrs and public_subnet_cidrs must have the same number of entries. The ALB (ArgoCD, app ingress) only ever attaches to public_subnet_cidrs' AZs; if private_subnet_cidrs spans more AZs than that, nodes/pods can land in an AZ the ALB has no subnet in and never receive traffic (ELB target state Target.NotInUse -> 503, even though the pod itself is healthy)."
+  }
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
