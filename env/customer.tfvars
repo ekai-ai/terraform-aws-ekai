@@ -36,23 +36,42 @@
 # root, via a remote_state read in cicd/). There's nothing for a human to set
 # for them.
 
-region           = "us-east-1"
-env              = "customer"
+# AWS region everything gets created in.
+region = "us-east-1"
+# Unique per deployment -- gets embedded in every resource name this creates
+# (ekai-eks-saas-<env>, ekai-terraform-<env> IAM user, the state bucket, ...).
+# Re-running with the same value modifies THIS deployment, not a new one.
+env = "customer"
+# Base EKS cluster name -- combined with env to form the real cluster name
+# (ekai-eks-saas-<env>). Rarely needs changing.
 eks_cluster_name = "ekai-eks"
 
+# VPC CIDR + its subnets. Defaults are large enough for this stack; only
+# change these if they'd conflict with a network you're peering/connecting to.
 vpc_cidr             = "172.16.0.0/20"
-public_subnet_cidrs  = ["172.16.4.0/26", "172.16.8.0/26"]
-private_subnet_cidrs = ["172.16.12.0/26", "172.16.14.0/26", "172.16.15.0/26"]
+public_subnet_cidrs  = ["172.16.4.0/26", "172.16.8.0/26"]                     # ALB/NAT gateway
+private_subnet_cidrs = ["172.16.12.0/26", "172.16.14.0/26", "172.16.15.0/26"] # EKS nodes + RDS
 # cluster_version = "1.32"   # uncomment to pin a specific version, otherwise AWS uses latest
 
-node_min_size           = "3"
-mode_max_size           = "5"
-node_instance           = "c5.xlarge"
-allocated_storage       = "40"
-backup_retention_period = "7"
+# Number of EKS worker nodes (fixed -- no cluster-autoscaler/Karpenter is
+# installed, so this is the real node count, not just a floor).
+node_min_size = "3"
+# Currently has no effect -- kept for when an autoscaler is added later.
+mode_max_size = "5"
+# EC2 instance type for worker nodes. Needs enough CPU/memory for the whole
+# app stack (backend/frontend/erd/workers/semantics/profile) plus Neo4j,
+# Redis, and cluster addons (ALB controller, ESO, CloudWatch, GuardDuty) —
+# c5.xlarge (4 vCPU/8GB) x3 is the minimum that's actually been tested to work.
+node_instance = "c5.xlarge"
+
+# RDS (PostgreSQL) sizing.
+allocated_storage       = "40" # GB
+backup_retention_period = "7"  # days of automated backups
 db_instance_class       = "db.t3.medium"
-multi_az                = "true"
-cloudwatch_namespace    = "amazon-cloudwatch"
+multi_az                = "true" # HA across 2 AZs -- roughly doubles RDS cost if true
+
+# K8s namespace for the CloudWatch Observability addon. Rarely needs changing.
+cloudwatch_namespace = "amazon-cloudwatch"
 # Check `aws rds describe-db-engine-versions --engine postgres` if this 400s
 # on apply — AWS periodically drops old minor versions from the supported list.
 engine_version   = "15.19"
