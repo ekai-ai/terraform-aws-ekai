@@ -24,9 +24,13 @@ applies, the module layout, the Terraform Registry option), see
 ```bash
 git clone https://github.com/ekai-ai/terraform-aws-ekai.git
 cd terraform-aws-ekai
+```
 
-# edit env/customer.tfvars — at minimum set: region, env, dns_zone
+**Required:** edit `env/customer.tfvars` and set at minimum `region`, `env`,
+`dns_zone` before continuing — `self-deploy.sh` will not work with the
+template's placeholder values.
 
+```bash
 ./scripts/self-deploy.sh customer
 ```
 
@@ -41,14 +45,6 @@ saves credentials, then runs both `terraform apply`s for you after one
 confirmation (it creates real, billable AWS resources).
 
 ## After a successful deploy
-
-Check the outputs for the ArgoCD URL/password, Route53 nameservers, portal
-URL, and customer secret's ARN:
-
-```bash
-terraform output -C examples/self-deploy/root
-terraform output -C examples/self-deploy/cicd
-```
 
 The customer secret (`ekai-customer` in AWS Secrets Manager by default —
 see `customer_secret_name` in `env/customer.tfvars`) ships with several
@@ -80,18 +76,18 @@ aws secretsmanager put-secret-value \
 
 Only `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/`AWS_SES_FROM_EMAIL` are
 needed to unblock the invite-email flow; the rest can stay `REPLACE_ME`
-until you need those specific features (LLM keys for onboarding/agent
-features, Cognito/GCS only if those integrations are used). The app picks
-up the new secret automatically within about a minute (ESO syncs it into
-the cluster, Reloader restarts the affected pods) — no `terraform apply`
-needed for this step.
+until you need those specific features. The app picks up the new secret
+automatically within about a minute (ESO syncs it into the cluster,
+Reloader restarts the affected pods) — no `terraform apply` needed for
+this step.
 
-**LLM setup note**: `ANTHROPIC_API_KEY`/`OPENAI_API_KEY` above are not
-actually read by the app for running agents — those are legacy top-level
-keys. The real LLM provider config is per-tenant, stored in Redis, and set
-through the app's own **Settings → LLM Config** page after you log in. Set
-the secret keys anyway (some other code paths may reference them), but
-expect to also configure a provider in the UI before agent features work.
+Optional — check the ArgoCD URL/password, Route53 nameservers, portal URL,
+and customer secret's ARN:
+
+```bash
+terraform output -C examples/self-deploy/root
+terraform output -C examples/self-deploy/cicd
+```
 
 ## Tearing down
 
