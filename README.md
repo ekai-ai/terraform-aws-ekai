@@ -116,3 +116,22 @@ terraform output -C examples/self-deploy/cicd
 
 Destroys everything this created, with confirmation prompts at each
 destructive stage. Safe to re-run if it fails partway.
+
+## Troubleshooting
+
+**`InvalidClientTokenId` / `An error occurred ... The security token
+included in the request is invalid` right at the start of the script** —
+this means your *base* AWS credentials are broken, before the script even
+gets to creating anything. Almost always caused by a stale
+`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/`AWS_SESSION_TOKEN` left
+exported in your shell from an earlier, unrelated session (these
+environment variables silently override your `~/.aws/credentials` file).
+Check and clear them:
+
+```bash
+env | grep -i AWS_
+unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
+aws sts get-caller-identity   # should succeed and show your real identity
+```
+
+Then re-run `self-deploy.sh`.
