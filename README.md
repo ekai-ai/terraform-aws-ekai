@@ -28,7 +28,26 @@ cd terraform-aws-ekai
 
 **Required:** edit `env/customer.tfvars` and set at minimum `region`, `env`,
 `dns_zone` before continuing — `self-deploy.sh` will not work with the
-template's placeholder values.
+template's placeholder values. Every variable has a full explanation as an
+inline comment in that file; the ones most worth a second look before your
+first deploy:
+
+| Variable | What it controls |
+|---|---|
+| `region` | AWS region everything is created in |
+| `env` | Unique name embedded in every resource this creates — must be unique per deployment |
+| `dns_zone` | Domain this deploys under (`portal.<dns_zone>`, `argocd.<dns_zone>`, ...) |
+| `manage_dns_zone` | `true` if Terraform should create the Route53 zone; `false` + `route53_zone_id` if you already have one |
+| `node_instance` / `node_min_size` | Worker node size/count — `c5.xlarge` x3 is the tested minimum for the full app stack |
+| `db_instance_class` / `allocated_storage` / `multi_az` | RDS sizing and HA — `multi_az = true` roughly doubles RDS cost |
+| `enable_redis` / `enable_neo4j` | Must both be `true` — the app's ERD/KEDA features need them |
+| `existing_ecr_base_url` | Where the app's container images are pulled from |
+| `helm_chart_repo_url` / `helm_chart_version` | Where the `ekai-saas` Helm chart itself comes from |
+| `customer_secret_name` | AWS Secrets Manager secret name holding every app env var (default `ekai-customer`) |
+
+Full reference (every variable, every default): `variables.tf` and
+`cicd/variables.tf` — or the Terraform Registry's auto-generated Inputs
+page once this is published there (see [ARCHITECTURE.md](ARCHITECTURE.md)).
 
 ```bash
 ./scripts/self-deploy.sh customer
