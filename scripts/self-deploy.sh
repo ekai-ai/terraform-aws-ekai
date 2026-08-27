@@ -131,6 +131,10 @@ cat > "${POLICY_DIR}/infra.json" <<'POLICY'
         "eks:DescribeAddon","eks:UpdateAddon","eks:ListAddons","eks:DescribeUpdate",
         "eks:ListClusters","eks:ListNodegroups","eks:TagResource","eks:UntagResource"
       ], "Resource": "*" },
+    { "Sid": "AutoscalerASGTags", "Effect": "Allow", "Action": [
+        "autoscaling:CreateOrUpdateTags","autoscaling:DeleteTags",
+        "autoscaling:DescribeAutoScalingGroups","autoscaling:DescribeTags"
+      ], "Resource": "*" },
     { "Sid": "Database", "Effect": "Allow", "Action": [
         "rds:CreateDBInstance","rds:DeleteDBInstance","rds:DescribeDBInstances",
         "rds:ModifyDBInstance","rds:RebootDBInstance",
