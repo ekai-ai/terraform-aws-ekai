@@ -40,11 +40,25 @@ safely. See `cicd/main.tf`'s header comment for the full explanation.
 ## Quick start (recommended — one command)
 
 ```bash
-cp env/customer.tfvars env/<name>.tfvars
-# edit env/<name>.tfvars — at minimum: region, env, dns_zone
+git clone https://github.com/ekai-ai/terraform-aws-ekai.git
+cd terraform-aws-ekai
 
-./scripts/self-deploy.sh <name>
+# edit env/customer.tfvars — at minimum set: region, env, dns_zone
+# (env doesn't have to be "customer" -- it can be anything, e.g. your own
+# company name; env/customer.tfvars just has to exist and be filled in
+# before the next step, no renaming/copying required)
+
+./scripts/self-deploy.sh customer
 ```
+
+The argument to `self-deploy.sh` must match the tfvars filename in `env/`
+(without `.tfvars`) — if you renamed the file to `env/acme.tfvars`, run
+`./scripts/self-deploy.sh acme` instead. Use a real, unique name (not
+`customer`) if you're deploying more than once — every AWS resource this
+creates embeds `env` in its name (`ekai-eks-saas-<env>`,
+`ekai-terraform-<env>` IAM user, the state bucket, ...), so re-running with
+the same `env` value re-deploys/modifies the *same* infrastructure rather
+than creating a second, independent one.
 
 `self-deploy.sh` creates the scoped IAM user Terraform needs, generates and
 saves credentials, then runs both `terraform apply`s for you (in
@@ -54,19 +68,52 @@ header comment for exactly what each step does. This is the one command
 most clients need — everything below is either what it does under the hood
 or an alternative for advanced use cases.
 
-After both applies, check the outputs for the ArgoCD URL/password and
-Route53 nameservers (root) and the portal URL and customer secret's ARN
-(cicd):
+### After a successful deploy
+
+Check the outputs for the ArgoCD URL/password and Route53 nameservers
+(root) and the portal URL and customer secret's ARN (cicd):
 
 ```bash
 terraform output -C examples/self-deploy/root
 terraform output -C examples/self-deploy/cicd
 ```
 
-Fill in the `REPLACE_ME` placeholders in the customer secret (LLM API keys,
-Cognito, an IAM user with S3/SES access — see
-`terraform output -C examples/self-deploy/cicd client_iam_policy_for_secret_placeholders`)
-before the app is fully usable.
+The customer secret (`ekai-customer` in AWS Secrets Manager by default —
+see `customer_secret_name` in `env/customer.tfvars`) ships with several
+`REPLACE_ME` placeholders the app needs real values for (LLM API keys,
+Cognito, an IAM user with S3/SES access). Fill them in with one command —
+replace the `...` values below with real ones (the IAM user's own
+credentials, if not created yet, need a policy at minimum matching
+`terraform output -C examples/self-deploy/cicd
+client_iam_policy_for_secret_placeholders`):
+
+```bash
+aws secretsmanager put-secret-value \
+  --secret-id ekai-customer \
+  --region <your region> \
+  --secret-string "$(aws secretsmanager get-secret-value --secret-id ekai-customer --region <your region> --query SecretString --output text | jq '
+    .ANTHROPIC_API_KEY = "sk-ant-..." |
+    .OPENAI_API_KEY = "sk-..." |
+    .COGNITO_REGION = "..." |
+    .COGNITO_USER_POOL_ID = "..." |
+    .COGNITO_CLIENT_ID = "..." |
+    .AWS_ACCESS_KEY_ID = "..." |
+    .AWS_SECRET_ACCESS_KEY = "..." |
+    .AWS_SES_FROM_EMAIL = "..." |
+    .SEMANTICS__GOOGLE_CLOUD_PROJECT = "..." |
+    .SEMANTICS__GCS_DOCAI_PROCESSOR_ID = "..." |
+    .SEMANTICS__GCS_INPUT_BUCKET = "..." |
+    .SEMANTICS__GCS_OUTPUT_BUCKET = "..."
+  ')"
+```
+
+Only `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/`AWS_SES_FROM_EMAIL` are
+needed to unblock the invite-email flow; the rest can stay `REPLACE_ME`
+until you actually need those specific features (LLM keys are needed for
+onboarding/agent features, Cognito/GCS only if those integrations are used).
+The app picks up the new secret automatically within about a minute (ESO
+syncs it into the cluster, Reloader restarts the affected pods) — no
+`terraform apply` needed for this step.
 
 ## Manual deploy (without self-deploy.sh)
 
@@ -94,16 +141,16 @@ done**), you can consume them directly instead of using
 ```hcl
 module "infra" {
   source  = "registry.terraform.io/ekai-ai/ekai/aws"
-  version = "~> 1.0"
+  version = "~> 0.1"
 
   region = "us-east-1"
-  env    = "acme"
+  env    = "<your-name>"
   # ...every variable in variables.tf
 }
 
 module "cicd" {
   source  = "registry.terraform.io/ekai-ai/ekai/aws//cicd"
-  version = "~> 1.0"
+  version = "~> 0.1"
   # ...every variable in cicd/variables.tf, plus the values module.infra
   # exports that cicd needs (see examples/self-deploy/cicd/main.tf for
   # exactly which — with a registry module you'd normally wire these with
