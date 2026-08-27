@@ -4,9 +4,12 @@
 #
 # Usage:  ./scripts/self-deploy-destroy.sh <ENV>
 #
-# This repo is 2 Terraform root configs (down from the original 4 layers, but
-# not all the way to 1 — see cicd/main.tf's file header for why the cicd
-# apply has to stay separate). Destroy runs in reverse dependency order:
+# The repo root and cicd/ are reusable Terraform modules (no backend block
+# of their own — see providers.tf / cicd/providers.tf); the actual
+# state-holding root configs that apply/destroy them live at
+# examples/self-deploy/{root,cicd} (down from the original 4 layers, but not
+# all the way to 1 — see cicd/main.tf's file header for why the cicd apply
+# has to stay separate from root's). Destroy runs in reverse dependency order:
 #   1. terraform destroy in cicd/ FIRST — it depends on the root config's
 #      cluster/ArgoCD still being live (its kubernetes/kubectl/argocd
 #      providers need a real API server + running ArgoCD to clean up
@@ -106,9 +109,13 @@ done
 export AWS_ACCESS_KEY_ID="${TF_AWS_ACCESS_KEY_ID}"
 export AWS_SECRET_ACCESS_KEY="${TF_AWS_SECRET_ACCESS_KEY}"
 
+# Both destroys run from examples/self-deploy/{cicd,root} — the repo root
+# and cicd/ directories are pure Terraform modules now (no backend block of
+# their own), so they can't be applied/destroyed directly. See
+# examples/self-deploy/root/main.tf's header comment.
 vpc_cleanup() {
   echo "==> Checking for VPC orphan resources (ALBs, ENIs, SGs)..."
-  cd "${REPO_ROOT}"
+  cd "${REPO_ROOT}/examples/self-deploy/root"
   VPC_ID=$(terraform output -raw vpc_id 2>/dev/null || echo "")
   if [[ -z "${VPC_ID}" || "${VPC_ID}" == "null" ]]; then
     echo "    No VPC ID found — skipping."
@@ -125,9 +132,9 @@ vpc_cleanup() {
 # Application against.
 echo
 echo "════════ terraform destroy (cicd) ════════"
-cd "${REPO_ROOT}/cicd"
-terraform init -upgrade -reconfigure -backend-config="../env/backend-${ENV}-cicd.tfbackend" 1>/dev/null
-terraform destroy -auto-approve -compact-warnings -var-file="../env/${ENV}.tfvars"
+cd "${REPO_ROOT}/examples/self-deploy/cicd"
+terraform init -upgrade -reconfigure -backend-config="../../../env/backend-${ENV}-cicd.tfbackend" 1>/dev/null
+terraform destroy -auto-approve -compact-warnings -var-file="../../../env/${ENV}.tfvars"
 
 echo
 echo "✓ cicd destroyed for env=${ENV}."
@@ -144,15 +151,15 @@ echo "✓ cicd destroyed for env=${ENV}."
 # applies to this combined destroy instead.
 echo
 echo "════════ terraform destroy (bootstrap + cluster + platform) ════════"
-cd "${REPO_ROOT}"
-terraform init -upgrade -reconfigure -backend-config="env/backend-${ENV}.tfbackend" 1>/dev/null
-if ! terraform destroy -auto-approve -compact-warnings -var-file="env/${ENV}.tfvars"; then
+cd "${REPO_ROOT}/examples/self-deploy/root"
+terraform init -upgrade -reconfigure -backend-config="../../../env/backend-${ENV}.tfbackend" 1>/dev/null
+if ! terraform destroy -auto-approve -compact-warnings -var-file="../../../env/${ENV}.tfvars"; then
   echo "First destroy attempt failed — re-running VPC cleanup and retrying once..."
   vpc_cleanup
   echo "==> Waiting 5 minutes for EKS control-plane ENIs / ALBs to fully release before retrying..."
   sleep 300
-  terraform refresh -compact-warnings -var-file="env/${ENV}.tfvars" 2>/dev/null || true
-  terraform destroy -auto-approve -compact-warnings -var-file="env/${ENV}.tfvars"
+  terraform refresh -compact-warnings -var-file="../../../env/${ENV}.tfvars" 2>/dev/null || true
+  terraform destroy -auto-approve -compact-warnings -var-file="../../../env/${ENV}.tfvars"
 fi
 
 echo

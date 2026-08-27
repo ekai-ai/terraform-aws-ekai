@@ -25,13 +25,13 @@
 terraform {
   required_version = ">= 1.5"
 
-  # Partial backend config — provide per-environment via -backend-config flag.
-  # Example:
-  #   terraform init -backend-config=env/backend-<env>-cicd.tfbackend
-  #
-  # Second of the 2 states in this repo — see scripts/init-state-backend.sh.
-  backend "s3" {}
-
+  # No backend block here — this directory is a reusable Terraform module
+  # (a second `module "cicd" { source = ... }` block for registry consumers,
+  # or a plain relative `source` for anyone using this repo directly), not a
+  # state-holding root config. The actual root config that DOES declare a
+  # backend and gets applied is examples/self-deploy/cicd/ — see that
+  # directory's main.tf, and scripts/init-state-backend.sh for how its
+  # backend config is generated.
   required_providers {
     aws = {
       source  = "hashicorp/aws"

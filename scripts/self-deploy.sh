@@ -329,7 +329,7 @@ if [[ "${CICD_PROVIDER}" == "none" ]]; then
   echo "    its own ArgoCD admin password, the cluster submodule its own RDS"
   echo "    credentials. Skipping."
   echo "    Retrieve the ArgoCD password after apply: it's also in the customer"
-  echo "    secret's ARGOCD_PASSWORD key, or run"
+  echo "    secret's ARGOCD_PASSWORD key, or run (from examples/self-deploy/root)"
   echo "    terraform output -raw argocd_admin_password"
 else
   echo "Leave any prompt blank to auto-generate a strong random value."
@@ -406,12 +406,12 @@ if [[ ! "${CONFIRM}" =~ ^[Yy]$ ]]; then
   echo
   echo "Skipped. When you're ready, deploy locally:"
   echo "  ${SCRIPT_DIR}/init-state-backend.sh ${ENV}"
-  echo "  cd ${REPO_ROOT}"
-  echo "  terraform init -backend-config=env/backend-${ENV}.tfbackend"
-  echo "  terraform apply -var-file=env/${ENV}.tfvars"
-  echo "  cd cicd"
-  echo "  terraform init -backend-config=../env/backend-${ENV}-cicd.tfbackend"
-  echo "  terraform apply -var-file=../env/${ENV}.tfvars"
+  echo "  cd ${REPO_ROOT}/examples/self-deploy/root"
+  echo "  terraform init -backend-config=../../../env/backend-${ENV}.tfbackend"
+  echo "  terraform apply -var-file=../../../env/${ENV}.tfvars"
+  echo "  cd ../cicd"
+  echo "  terraform init -backend-config=../../../env/backend-${ENV}-cicd.tfbackend"
+  echo "  terraform apply -var-file=../../../env/${ENV}.tfvars"
   echo "(use the AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY values in ${SECRETS_FILE} if a new key was created above)"
   echo
   echo "Generated secrets are saved at: ${SECRETS_FILE}"
@@ -436,18 +436,23 @@ echo "==> Initializing state backend..."
 
 # 2 applies, in order: bootstrap+cluster+platform first (its state feeds
 # cicd's terraform_remote_state read — see cicd/main.tf's file header for why
-# cicd can't be folded into this same apply), then cicd.
+# cicd can't be folded into this same apply), then cicd. Both run from
+# examples/self-deploy/{root,cicd} — the repo root and cicd/ directories are
+# pure Terraform modules now (no backend block of their own; see
+# providers.tf / cicd/providers.tf), so they can't be applied directly.
+# examples/self-deploy/{root,cicd} are the actual state-holding root configs
+# that wrap them — see examples/self-deploy/root/main.tf's header comment.
 echo
 echo "════════ terraform apply (bootstrap + cluster + platform) ════════"
-cd "${REPO_ROOT}"
-terraform init -upgrade -reconfigure -backend-config="env/backend-${ENV}.tfbackend"
-terraform apply -auto-approve -compact-warnings -var-file="env/${ENV}.tfvars"
+cd "${REPO_ROOT}/examples/self-deploy/root"
+terraform init -upgrade -reconfigure -backend-config="../../../env/backend-${ENV}.tfbackend"
+terraform apply -auto-approve -compact-warnings -var-file="../../../env/${ENV}.tfvars"
 
 echo
 echo "════════ terraform apply (cicd) ════════"
-cd "${REPO_ROOT}/cicd"
-terraform init -upgrade -reconfigure -backend-config="../env/backend-${ENV}-cicd.tfbackend"
-terraform apply -auto-approve -compact-warnings -var-file="../env/${ENV}.tfvars"
+cd "${REPO_ROOT}/examples/self-deploy/cicd"
+terraform init -upgrade -reconfigure -backend-config="../../../env/backend-${ENV}-cicd.tfbackend"
+terraform apply -auto-approve -compact-warnings -var-file="../../../env/${ENV}.tfvars"
 
 echo
 echo "✓ Deploy complete for env=${ENV}."

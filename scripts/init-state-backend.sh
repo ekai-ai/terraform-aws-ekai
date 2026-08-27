@@ -8,12 +8,14 @@
 #   1. Reads region from env/<ENV>.tfvars
 #   2. Creates (or verifies) an S3 bucket: ekai-terraform-state-<ENV>-<REGION>
 #      with versioning + AES256 encryption + public-access block
-#   3. Writes TWO backend config files — this repo is 2 Terraform root
-#      configs (down from the original 4 layers, but not all the way to 1 —
-#      see cicd/main.tf's file header for why the cicd apply has to stay
-#      separate):
-#        env/backend-<ENV>.tfbackend       — repo root (bootstrap+cluster+platform)
-#        env/backend-<ENV>-cicd.tfbackend  — cicd/
+#   3. Writes TWO backend config files, one per state-holding root config
+#      (down from the original 4 layers, but not all the way to 1 — see
+#      cicd/main.tf's file header for why the cicd apply has to stay
+#      separate). The repo root and cicd/ are Terraform modules (no backend
+#      block of their own); examples/self-deploy/{root,cicd} are the actual
+#      root configs that use these files:
+#        env/backend-<ENV>.tfbackend       — examples/self-deploy/root (bootstrap+cluster+platform)
+#        env/backend-<ENV>-cicd.tfbackend  — examples/self-deploy/cicd
 #
 # Idempotent — safe to run multiple times; existing resources are not modified.
 # ──────────────────────────────────────────────────────────────────────────────
@@ -116,9 +118,12 @@ EOF
 echo ""
 echo "✓ Done. Backend files written to ${ROOT_BACKEND_FILE} and ${CICD_BACKEND_FILE}"
 echo ""
-echo "Apply, in order:"
-echo "  terraform init -backend-config=env/backend-${ENV}.tfbackend"
-echo "  terraform apply -var-file=env/${ENV}.tfvars"
-echo "  cd cicd"
-echo "  terraform init -backend-config=../env/backend-${ENV}-cicd.tfbackend"
-echo "  terraform apply -var-file=../env/${ENV}.tfvars"
+echo "Apply, in order (the repo root and cicd/ are Terraform modules, not"
+echo "applyable directly — examples/self-deploy/{root,cicd} are the actual"
+echo "state-holding root configs that wrap them):"
+echo "  cd examples/self-deploy/root"
+echo "  terraform init -backend-config=../../../env/backend-${ENV}.tfbackend"
+echo "  terraform apply -var-file=../../../env/${ENV}.tfvars"
+echo "  cd ../cicd"
+echo "  terraform init -backend-config=../../../env/backend-${ENV}-cicd.tfbackend"
+echo "  terraform apply -var-file=../../../env/${ENV}.tfvars"

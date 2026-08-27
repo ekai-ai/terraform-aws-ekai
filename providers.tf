@@ -1,8 +1,10 @@
 # ──────────────────────────────────────────────────────────────────────────────
-# Root providers (bootstrap + cluster + platform) — backend + required_providers
-# is the union of what THESE 3 submodules' trees actually use. Provider
+# Root providers (bootstrap + cluster + platform) — required_providers is the
+# union of what THESE 3 submodules' trees actually use. Provider
 # *configuration* blocks (provider "aws" {}, "kubernetes" {}, "helm" {},
-# "kubectl" {}) live ONLY here — submodules cannot declare their own provider
+# "kubectl" {}) live here (this directory still configures its own providers,
+# same as before — only the backend block moved out, see below) — the
+# bootstrap/cluster/platform submodules cannot declare their own provider
 # config, only require providers via their own required_providers block (kept
 # in each modules/<name>/providers.tf for documentation).
 #
@@ -33,19 +35,13 @@
 terraform {
   required_version = ">= 1.9"
 
-  # Partial backend config — provide per-environment via -backend-config flag.
-  # Example:
-  #   terraform init -backend-config=env/backend-<env>.tfbackend
-  #
-  # The S3 state bucket MUST exist before terraform init can succeed.
-  # Create it first with: scripts/init-state-backend.sh <env>
-  #
-  # This is one of TWO separate states in this repo — this one holds
-  # bootstrap+cluster+platform ("combined"); ../cicd/ holds its own, reading
-  # this state's outputs via `data "terraform_remote_state"`. See
-  # scripts/init-state-backend.sh for the exact key each gets.
-  backend "s3" {}
-
+  # No backend block here — this directory is a reusable Terraform module
+  # (module "infra" { source = "registry.terraform.io/ekai-ai/ekai/aws" } for
+  # registry consumers, or a plain relative `source` for anyone using this
+  # repo directly), not a state-holding root config. The actual root config
+  # that DOES declare a backend and gets applied is
+  # examples/self-deploy/root/ — see that directory's main.tf, and
+  # scripts/init-state-backend.sh for how its backend config is generated.
   required_providers {
     aws = {
       source  = "hashicorp/aws"

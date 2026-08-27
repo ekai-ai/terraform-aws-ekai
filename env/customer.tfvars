@@ -3,26 +3,31 @@
 # deployment isn't a tier — it's one client's own AWS account. Copy this
 # file, rename it to the client's actual name, fill in the values below.
 #
-# This repo is 2 separate Terraform root configs — this ONE tfvars file
-# feeds both (exactly like the original 4-layer design, where one tfvars
-# file already served all 4 layers; each config simply ignores the tfvars
-# keys it doesn't declare a variable for):
-#   .  (repo root) — bootstrap + cluster + platform, combined into one apply/
-#      state (down from 3 separate ones in the original design)
-#   cicd/           — kept as its own separate apply/state, same as the
-#      original 04-cicd layer, because the ArgoCD Terraform provider can only
-#      be configured from a value read from an ALREADY-COMPLETED apply's
-#      state (a remote_state read), never from a resource this SAME apply
-#      also creates — see cicd/main.tf's file header for the full reasoning.
+# The repo root and cicd/ are reusable Terraform modules (no backend block of
+# their own) — this ONE tfvars file feeds the two ACTUAL state-holding root
+# configs that wrap them, examples/self-deploy/root and
+# examples/self-deploy/cicd (exactly like the original 4-layer design, where
+# one tfvars file already served all 4 layers; each config simply ignores
+# the tfvars keys it doesn't declare a variable for):
+#   examples/self-deploy/root  — wraps the repo root (bootstrap + cluster +
+#      platform, combined into one apply/state, down from 3 separate ones in
+#      the original design)
+#   examples/self-deploy/cicd  — wraps cicd/, kept as its own separate
+#      apply/state, same as the original 04-cicd layer, because the ArgoCD
+#      Terraform provider can only be configured from a value read from an
+#      ALREADY-COMPLETED apply's state (a remote_state read), never from a
+#      resource this SAME apply also creates — see cicd/main.tf's file
+#      header for the full reasoning.
 #
 # So: 2 backend config files, 2 inits, 2 applies (in order — cicd depends on
 # the root's state). Run scripts/init-state-backend.sh <name> to generate
 # both, then:
-#   terraform init -backend-config=env/backend-<name>.tfbackend
-#   terraform apply -var-file=env/<name>.tfvars
-#   cd cicd
-#   terraform init -backend-config=../env/backend-<name>-cicd.tfbackend
-#   terraform apply -var-file=../env/<name>.tfvars
+#   cd examples/self-deploy/root
+#   terraform init -backend-config=../../../env/backend-<name>.tfbackend
+#   terraform apply -var-file=../../../env/<name>.tfvars
+#   cd ../cicd
+#   terraform init -backend-config=../../../env/backend-<name>-cicd.tfbackend
+#   terraform apply -var-file=../../../env/<name>.tfvars
 # (scripts/self-deploy.sh does all of this for you, in order.)
 #
 # route53_zone_id and ssl_certificate_arn are NOT set here even though the
