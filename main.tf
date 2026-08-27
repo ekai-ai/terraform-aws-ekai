@@ -115,6 +115,7 @@ module "platform" {
   public_subnet_ids   = module.cluster.public_subnet_ids
   vpc_id              = module.cluster.vpc_id
   eks_cluster_name    = module.cluster.eks_cluster_name
+  node_group_asg_name = module.cluster.node_group_asg_name
   ssl_certificate_arn = module.bootstrap.ssl_certificate_arn
   route53_zone_id     = module.bootstrap.route53_zone_id
 }

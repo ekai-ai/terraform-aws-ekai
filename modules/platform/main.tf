@@ -61,6 +61,20 @@ module "alb_controller" {
   }
 }
 
+# ── Cluster Autoscaler (IRSA + Helm) ──────────────────────────────────────────
+# Scales the node group's ASG within the min/max already set in 02-cluster's
+# scaling_config (node_min_size/mode_max_size) — no cluster-level change
+# needed to raise the ceiling, just edit mode_max_size in tfvars.
+module "cluster_autoscaler" {
+  source                           = "../cluster_autoscaler"
+  cluster_name                     = local.eks_cluster_name
+  cluster_identity_oidc_issuer     = local.oidc_issuer
+  cluster_identity_oidc_issuer_arn = local.oidc_issuer
+  aws_region                       = var.region
+  node_group_asg_name              = var.node_group_asg_name
+  helm_chart_version               = var.cluster_autoscaler_chart_version
+}
+
 # On destroy: argoCD + keda depend on this time_sleep, so they are destroyed
 # first. time_sleep then waits 2 minutes (destroy_duration) giving the ALB
 # Controller time to reconcile Ingress deletions and delete the ALBs from AWS

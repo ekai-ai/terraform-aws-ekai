@@ -100,6 +100,12 @@ variable "alb_controller_chart_version" {
   default     = "1.12.0"
 }
 
+variable "cluster_autoscaler_chart_version" {
+  description = "Cluster Autoscaler Helm chart version."
+  type        = string
+  default     = "9.59.0"
+}
+
 variable "redis_chart_version" {
   description = "Bitnami Redis Helm chart version."
   type        = string
@@ -214,6 +220,11 @@ variable "vpc_id" {
 
 variable "eks_cluster_name" {
   description = "Full EKS cluster name (sourced from the cluster submodule's output)"
+  type        = string
+}
+
+variable "node_group_asg_name" {
+  description = "Name of the node group's Auto Scaling Group (sourced from the cluster submodule's output) — Cluster Autoscaler auto-discovers and scales this"
   type        = string
 }
 

@@ -49,6 +49,11 @@ output "node_group_role_arn" {
   value       = module.iam.NODE_GROUP_ROLE_ARN
 }
 
+output "node_group_asg_name" {
+  description = "Name of the Auto Scaling Group behind the EKS managed node group (used by Cluster Autoscaler)"
+  value       = module.node_group.asg_name
+}
+
 output "rds_endpoint" {
   description = "RDS PostgreSQL endpoint (host:port)"
   value       = module.rds.ekai_saas_db_endpoint

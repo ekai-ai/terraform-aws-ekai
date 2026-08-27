@@ -65,8 +65,11 @@ mode_max_size = "5"
 # EC2 instance type for worker nodes. Needs enough CPU/memory for the whole
 # app stack (backend/frontend/erd/workers/semantics/profile) plus Neo4j,
 # Redis, and cluster addons (ALB controller, ESO, CloudWatch, GuardDuty) —
-# c5.xlarge (4 vCPU/8GB) x3 is the minimum that's actually been tested to work.
-node_instance = "c5.xlarge"
+# c5.xlarge (4 vCPU/8GB) ran out of memory once erd + erd-worker(x3) +
+# profile-worker(x2) + document-worker all landed on the same node (they
+# share an AZ-locked EBS-backed PVC, so they can't spread across nodes in
+# other AZs) — c5.2xlarge (8 vCPU/16GB) x3 is the tested minimum now.
+node_instance = "c5.2xlarge"
 
 # RDS (PostgreSQL) sizing.
 allocated_storage       = "40" # GB
