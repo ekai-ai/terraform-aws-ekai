@@ -271,6 +271,12 @@ variable "alb_controller_chart_version" {
   default     = "1.12.0"
 }
 
+variable "cluster_autoscaler_chart_version" {
+  description = "Cluster Autoscaler Helm chart version."
+  type        = string
+  default     = "9.59.0"
+}
+
 # ── Redis (optional) ──────────────────────────────────────────────────────────
 
 variable "enable_redis" {
