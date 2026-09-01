@@ -12,7 +12,7 @@ applies, the module layout, the Terraform Registry option), see
 
 - [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html),
   configured (`aws configure`) — see [PERMISSIONS.md](PERMISSIONS.md) for
-  exactly what this identity needs (not full account admin)
+  exactly what this identity needs
 - [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.9
 - `jq`, `htpasswd` (from `apache2-utils`/`httpd-tools`), `openssl`
 - A domain you can either delegate a subdomain of to Route53, or that
