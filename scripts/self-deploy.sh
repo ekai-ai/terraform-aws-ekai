@@ -22,8 +22,10 @@
 # You do NOT need to know Terraform, IAM policies, or bcrypt to run this.
 # Everything it creates is idempotent — safe to re-run if it fails partway.
 #
-# Requires: aws cli (configured with an account-admin identity), htpasswd,
-#           openssl, jq, terraform.
+# Requires: aws cli, htpasswd, openssl, jq, terraform. The identity aws cli
+#           is configured with only needs permission to manage one IAM user
+#           and two IAM policies -- see ../PERMISSIONS.md for the exact
+#           policy, not full account admin.
 # ──────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
@@ -66,8 +68,15 @@ fi
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 echo "==> AWS account: ${ACCOUNT_ID}"
 echo "==> Currently authenticated as: $(aws sts get-caller-identity --query Arn --output text)"
-echo "    (this identity needs IAM/Secrets Manager admin rights to run this script —"
-echo "     it is NOT the identity Terraform will use)"
+if [[ "${CICD_PROVIDER}" == "none" ]]; then
+  echo "    (this identity only needs permission to manage one IAM user + two"
+  echo "     IAM policies — see PERMISSIONS.md for the exact policy. It is NOT"
+  echo "     the identity Terraform will use.)"
+else
+  echo "    (this identity needs IAM permissions per PERMISSIONS.md, plus Secrets"
+  echo "     Manager create/read/write for the master + per-service secrets"
+  echo "     Step 3 below creates. It is NOT the identity Terraform will use.)"
+fi
 echo
 
 OUT_DIR="${REPO_ROOT}/.self-deploy"

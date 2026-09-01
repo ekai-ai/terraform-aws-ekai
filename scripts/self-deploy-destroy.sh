@@ -106,6 +106,24 @@ for i in $(seq 1 10); do
     aws sts get-caller-identity >/dev/null 2>&1 && { echo "    ✓ Key is active."; break; }
   sleep 3
 done
+
+# Save whatever credential env vars the operator's own shell already had (if
+# any) so Section 5 below can restore them -- ekai-terraform-policy-infra/-cicd
+# grant no iam:*User*/iam:*AccessKey* actions at all (not even for
+# self-management), so deleting ekai-terraform-<env> itself needs the
+# operator's own admin identity back, not the scoped one exported next.
+_ORIG_AWS_ACCESS_KEY_ID_SET="${AWS_ACCESS_KEY_ID+x}"
+_ORIG_AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID-}"
+_ORIG_AWS_SECRET_ACCESS_KEY_SET="${AWS_SECRET_ACCESS_KEY+x}"
+_ORIG_AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY-}"
+_ORIG_AWS_SESSION_TOKEN_SET="${AWS_SESSION_TOKEN+x}"
+_ORIG_AWS_SESSION_TOKEN="${AWS_SESSION_TOKEN-}"
+restore_admin_credentials() {
+  if [[ -n "${_ORIG_AWS_ACCESS_KEY_ID_SET}" ]]; then export AWS_ACCESS_KEY_ID="${_ORIG_AWS_ACCESS_KEY_ID}"; else unset AWS_ACCESS_KEY_ID; fi
+  if [[ -n "${_ORIG_AWS_SECRET_ACCESS_KEY_SET}" ]]; then export AWS_SECRET_ACCESS_KEY="${_ORIG_AWS_SECRET_ACCESS_KEY}"; else unset AWS_SECRET_ACCESS_KEY; fi
+  if [[ -n "${_ORIG_AWS_SESSION_TOKEN_SET}" ]]; then export AWS_SESSION_TOKEN="${_ORIG_AWS_SESSION_TOKEN}"; else unset AWS_SESSION_TOKEN; fi
+}
+
 export AWS_ACCESS_KEY_ID="${TF_AWS_ACCESS_KEY_ID}"
 export AWS_SECRET_ACCESS_KEY="${TF_AWS_SECRET_ACCESS_KEY}"
 
@@ -190,6 +208,11 @@ else
 fi
 
 # ── 5. Optional: the IAM user self-deploy.sh created ──────────────────────────
+# Restore the operator's own admin credentials -- everything from here on
+# (deleting an IAM user, its access keys, its policy attachments) needs
+# admin-level IAM permissions the scoped ekai-terraform-<env> user was never
+# granted, not even for managing itself.
+restore_admin_credentials
 echo
 USER_NAME="ekai-terraform-${ENV}"
 read -rp "Also delete the IAM user ${USER_NAME} and its access key? [y/N] " CLEAN_IAM
