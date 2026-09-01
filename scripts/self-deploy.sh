@@ -22,7 +22,7 @@
 # You do NOT need to know Terraform, IAM policies, or bcrypt to run this.
 # Everything it creates is idempotent — safe to re-run if it fails partway.
 #
-# Requires: aws cli, htpasswd, openssl, jq, terraform. The identity aws cli
+# Requires: aws cli, htpasswd, openssl, jq, dig, terraform. The identity aws cli
 #           is configured with only needs permission to manage one IAM user
 #           and two IAM policies -- see ../PERMISSIONS.md for the exact
 #           policy, not full account admin.
@@ -46,7 +46,7 @@ if [[ ! -f "${TFVARS}" ]]; then
   exit 1
 fi
 
-for bin in aws htpasswd openssl jq terraform; do
+for bin in aws htpasswd openssl jq dig terraform; do
   command -v "$bin" >/dev/null 2>&1 || { echo "ERROR: '$bin' is required but not installed."; exit 1; }
 done
 
@@ -460,6 +460,51 @@ echo "════════ terraform apply (bootstrap + cluster + platform) 
 cd "${REPO_ROOT}/examples/self-deploy/root"
 terraform init -upgrade -reconfigure -backend-config="../../../env/backend-${ENV}.tfbackend"
 terraform apply -auto-approve -compact-warnings -var-file="../../../env/${ENV}.tfvars"
+
+# ── DNS delegation — only when Terraform just created a NEW Route53 zone.
+# Delegating dns_zone to AWS's nameservers at your registrar/parent zone is
+# out-of-band and human-timed -- Terraform has no access to do it for you.
+# Until it's done, ACM certificate validation (DNS-01 style CNAME) can't
+# succeed, and every later Terraform action that waits on that cert
+# (aws_acm_certificate_validation) hangs for a very long time before ever
+# reporting failure. Same class of issue GCP's self-deploy.sh checks for
+# (cert-manager's ACME challenge) -- see that script's comments.
+MANAGE_DNS_ZONE=$(grep -E '^manage_dns_zone\s*=' "${TFVARS}" | head -1 | sed 's/.*=\s*\(true\|false\).*/\1/')
+if [[ "${MANAGE_DNS_ZONE}" == "true" ]]; then
+  DNS_ZONE=$(grep -E '^dns_zone\s*=' "${TFVARS}" | head -1 | sed 's/.*=\s*"\(.*\)".*/\1/')
+  # Strip trailing dots on both sides before comparing -- Route53's own API
+  # (and this output) return bare hostnames with no trailing dot, but dig
+  # always returns FQDNs with one; normalizing both avoids a false
+  # "not propagated" mismatch either way. Verified against real Route53
+  # zones and real dig output before shipping this (not just a syntax check).
+  ZONE_NS=$(terraform output -json route53_name_servers 2>/dev/null | jq -r '.[]' | sed 's/\.$//' | sort)
+  if [[ -n "${ZONE_NS}" ]]; then
+    echo
+    echo "════════ DNS delegation required ════════"
+    echo "Terraform just created a Route53 zone for ${DNS_ZONE}. Add an NS"
+    echo "record for ${DNS_ZONE} at your domain registrar (or your parent DNS"
+    echo "zone) pointing at each of these nameservers:"
+    echo "${ZONE_NS}" | sed 's/^/  /'
+    echo
+    read -rp "Press Enter once you've added it (Ctrl-C to do this later and re-run) " _
+    echo "==> Checking DNS delegation (this can take several minutes to propagate)..."
+    for i in $(seq 1 40); do
+      RESOLVED=$(dig +short NS "${DNS_ZONE}" @8.8.8.8 2>/dev/null | sed 's/\.$//' | sort)
+      if [[ -n "${RESOLVED}" && "${RESOLVED}" == "${ZONE_NS}" ]]; then
+        echo "✓ DNS delegation confirmed."
+        break
+      fi
+      echo "  Not propagated yet (attempt ${i}/40) — waiting 15s..."
+      sleep 15
+    done
+    if [[ "${RESOLVED}" != "${ZONE_NS}" ]]; then
+      echo "⚠ Still not resolving after 10 minutes — ACM certificate validation"
+      echo "  will keep failing until this delegation is correct. No need to"
+      echo "  re-run this script for that; the validation resource keeps"
+      echo "  waiting on its own once delegation is fixed."
+    fi
+  fi
+fi
 
 echo
 echo "════════ terraform apply (cicd) ════════"
