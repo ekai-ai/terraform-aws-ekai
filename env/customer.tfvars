@@ -57,11 +57,11 @@ public_subnet_cidrs  = ["172.16.4.0/26", "172.16.8.0/26", "172.16.0.0/26"]    # 
 private_subnet_cidrs = ["172.16.12.0/26", "172.16.14.0/26", "172.16.15.0/26"] # EKS nodes + RDS
 # cluster_version = "1.32"   # uncomment to pin a specific version, otherwise AWS uses latest
 
-# Number of EKS worker nodes (fixed -- no cluster-autoscaler/Karpenter is
-# installed, so this is the real node count, not just a floor).
-node_min_size = "3"
-# Currently has no effect -- kept for when an autoscaler is added later.
-mode_max_size = "5"
+# EKS worker node count. Cluster Autoscaler scales the node group between
+# these two based on pending pod resource requests -- node_min_size is the
+# floor (and initial desired size), mode_max_size the ceiling.
+node_min_size = "4"
+mode_max_size = "6"
 # EC2 instance type for worker nodes. Needs enough CPU/memory for the whole
 # app stack (backend/frontend/erd/workers/semantics/profile) plus Neo4j,
 # Redis, and cluster addons (ALB controller, ESO, CloudWatch, GuardDuty) —
