@@ -58,6 +58,8 @@ done
 
 REGION=$(grep -E '^region\s*=' "${TFVARS}" | head -1 | sed 's/.*=\s*"\(.*\)".*/\1/')
 [[ -z "${REGION}" ]] && { echo "ERROR: could not read 'region' from ${TFVARS}"; exit 1; }
+CICD_PROVIDER=$(grep -E '^cicd_provider\s*=' "${TFVARS}" | head -1 | sed 's/.*=\s*"\(.*\)".*/\1/')
+[[ -z "${CICD_PROVIDER}" ]] && CICD_PROVIDER="none"
 
 echo "════════════════════════════════════════════════════════════════"
 echo " Ekai AWS self-deploy DESTROY — environment: ${ENV} (region: ${REGION})"
@@ -190,8 +192,22 @@ echo
 echo "✓ Terraform infrastructure destroyed for env=${ENV}."
 
 # ── 3. Optional: S3 state bucket + ECR + CW logs + master secret ─────────────
+# For self-service (cicd_provider = "none"), only the state bucket is ever
+# actually created here -- ECR repos come from existing_ecr_base_url (an
+# existing public registry, create_ecr is never used), and the legacy
+# "${ENV}-ekai-db-credentials" master secret this step deletes was never
+# created either (self-deploy.sh's Step 3 skips it entirely for self-service).
+# The app's own secret (customer_secret_name, e.g. ekai-customer) is a
+# different, Terraform-managed resource -- already destroyed by the cicd
+# apply's terraform destroy in Section 1 above, unrelated to this step.
+# cleanup-aws-env.sh no-ops harmlessly on categories that don't exist either
+# way -- this prompt just says what's actually relevant for this deployment.
 echo
-read -rp "Also delete the S3 state bucket, ECR repos, CloudWatch logs, and master secret? [y/N] " CLEAN_AWS
+if [[ "${CICD_PROVIDER}" == "none" ]]; then
+  read -rp "Also delete the S3 state bucket? [y/N] " CLEAN_AWS
+else
+  read -rp "Also delete the S3 state bucket, ECR repos, CloudWatch logs, and master secret? [y/N] " CLEAN_AWS
+fi
 if [[ "${CLEAN_AWS}" =~ ^[Yy]$ ]]; then
   "${SCRIPT_DIR}/cleanup-aws-env.sh" "${ENV}" "${REGION}" --yes
 else
@@ -199,18 +215,24 @@ else
 fi
 
 # ── 4. Optional: per-service secrets self-deploy.sh created ──────────────────
-echo
-read -rp "Also delete the per-service secrets (${ENV}-ekai-backend/erd/semantics/profile)? [y/N] " CLEAN_SVC
-if [[ "${CLEAN_SVC}" =~ ^[Yy]$ ]]; then
-  for SVC in ekai-backend ekai-erd ekai-semantics ekai-profile; do
-    SNAME="${ENV}-${SVC}"
-    if aws secretsmanager describe-secret --secret-id "${SNAME}" --region "${REGION}" >/dev/null 2>&1; then
-      aws secretsmanager delete-secret --secret-id "${SNAME}" --region "${REGION}" --force-delete-without-recovery >/dev/null
-      echo "  Deleted: ${SNAME}"
-    fi
-  done
-else
-  echo "Skipped."
+# self-deploy.sh only ever creates these for cicd_provider != "none" (Step 3);
+# self-service generates one combined app secret (customer_secret_name)
+# instead, already destroyed by Terraform itself -- skip asking entirely
+# rather than prompting about secrets that were never created.
+if [[ "${CICD_PROVIDER}" != "none" ]]; then
+  echo
+  read -rp "Also delete the per-service secrets (${ENV}-ekai-backend/erd/semantics/profile)? [y/N] " CLEAN_SVC
+  if [[ "${CLEAN_SVC}" =~ ^[Yy]$ ]]; then
+    for SVC in ekai-backend ekai-erd ekai-semantics ekai-profile; do
+      SNAME="${ENV}-${SVC}"
+      if aws secretsmanager describe-secret --secret-id "${SNAME}" --region "${REGION}" >/dev/null 2>&1; then
+        aws secretsmanager delete-secret --secret-id "${SNAME}" --region "${REGION}" --force-delete-without-recovery >/dev/null
+        echo "  Deleted: ${SNAME}"
+      fi
+    done
+  else
+    echo "Skipped."
+  fi
 fi
 
 # ── 5. Optional: the IAM user self-deploy.sh created ──────────────────────────
