@@ -163,14 +163,20 @@ echo "✓ cicd destroyed for env=${ENV}."
 # same order the old 4-separate-states script used to drive by hand across
 # 03-platform/02-cluster/01-bootstrap (now that cicd is already gone above).
 #
-# VPC teardown is still the fragile part (ALB controller / EKS control-plane
-# ENIs can lag behind their own resource deletion), so the retry-with-cleanup
-# structure that used to apply only to the final 01-bootstrap destroy now
-# applies to this combined destroy instead.
+# VPC teardown is still the fragile part: the ALB controller, the EKS VPC CNI
+# plugin, and GuardDuty's EKS Runtime Monitoring all create ENIs/security
+# groups/VPC endpoints directly against the AWS API that Terraform never
+# tracks (no resource in state for them) -- terraform destroy can hang for a
+# very long time on a subnet's DependencyViolation before it ever reports
+# failure, since it keeps retrying internally rather than giving up quickly.
+# Run vpc_cleanup proactively BEFORE the first attempt (cheap and idempotent
+# -- everything it deletes only exists if a controller actually created it)
+# instead of waiting for that slow failure to trigger it reactively.
 echo
 echo "════════ terraform destroy (bootstrap + cluster + platform) ════════"
 cd "${REPO_ROOT}/examples/self-deploy/root"
 terraform init -upgrade -reconfigure -backend-config="../../../env/backend-${ENV}.tfbackend" 1>/dev/null
+vpc_cleanup
 if ! terraform destroy -auto-approve -compact-warnings -var-file="../../../env/${ENV}.tfvars"; then
   echo "First destroy attempt failed — re-running VPC cleanup and retrying once..."
   vpc_cleanup
