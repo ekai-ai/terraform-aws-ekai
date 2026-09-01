@@ -36,7 +36,6 @@ first deploy:
 | `region` | AWS region everything is created in |
 | `env` | Unique name embedded in every resource this creates — must be unique per deployment |
 | `dns_zone` | Domain this deploys under (`portal.<dns_zone>`, `argocd.<dns_zone>`, ...) |
-| `manage_dns_zone` | `true` if Terraform should create the Route53 zone; `false` + `route53_zone_id` if you already have one |
 
 Full reference (every variable, every default): `variables.tf` and
 `cicd/variables.tf` — or the Terraform Registry's auto-generated Inputs
