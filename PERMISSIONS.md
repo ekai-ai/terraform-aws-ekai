@@ -83,13 +83,8 @@ Secrets Manager, no S3 — those all belong to identity 2's own policy.
 
 ## Why this had to be two identities in the first place
 
-EKS clusters in this repo use `authentication_mode = CONFIG_MAP` — Kubernetes
-RBAC access is granted *only* to the exact IAM identity that ran
-`terraform apply` when the cluster was created (`aws-auth` ConfigMap, see
-`modules/cluster/main.tf`). If Terraform ran as your own broad admin
-identity, tearing down or modifying the cluster later from a different
-machine, a different admin, or after that identity's credentials rotate
-would all hit "Unauthorized" on every Kubernetes resource. A dedicated,
-narrowly-scoped, script-managed identity sidesteps that entirely — anyone
-who can run this script (with the permissions above) can also destroy what
-it created, without needing to already have your original admin session.
+EKS clusters here use `authentication_mode = CONFIG_MAP` — Kubernetes RBAC
+is granted *only* to the exact IAM identity that ran `terraform apply` when
+the cluster was created (`aws-auth` ConfigMap, see `modules/cluster/main.tf`).
+A dedicated, script-managed identity means anyone who can run this script
+can also destroy what it created, instead of needing your original session.
