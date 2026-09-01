@@ -10,14 +10,9 @@ applies, the module layout, the Terraform Registry option), see
 
 ## Prerequisites
 
-- An AWS identity with permission to create one specific IAM user and two
-  specific IAM policies — **not full account admin**. See
-  [PERMISSIONS.md](PERMISSIONS.md) for the exact, ready-to-attach policy;
-  this identity is only used to bootstrap the scoped IAM user Terraform
-  actually runs as (Step 1 of `scripts/self-deploy.sh`), never for the
-  deploy itself.
 - [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html),
-  configured (`aws configure`) with that identity
+  configured (`aws configure`) — see [PERMISSIONS.md](PERMISSIONS.md) for
+  exactly what this identity needs (not full account admin)
 - [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.9
 - `jq`, `htpasswd` (from `apache2-utils`/`httpd-tools`), `openssl`
 - A domain you can either delegate a subdomain of to Route53, or that
