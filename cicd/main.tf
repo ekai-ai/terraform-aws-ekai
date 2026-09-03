@@ -39,9 +39,6 @@ module "cicd" {
   ingress_class_name          = var.ingress_class_name
   shared_alb_name             = var.shared_alb_name
   use_minio                   = var.use_minio
-  claude_model                = var.claude_model
-  vector_embedding_model      = var.vector_embedding_model
-  vector_embedding_batch_size = var.vector_embedding_batch_size
   secret_recovery_window_days = var.secret_recovery_window_days
   secret_value_overrides      = var.secret_value_overrides
   manifest_folder             = var.manifest_folder
