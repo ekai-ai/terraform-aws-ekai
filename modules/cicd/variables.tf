@@ -190,7 +190,7 @@ variable "create_ecr" {
 }
 
 variable "existing_ecr_base_url" {
-  description = "Used when create_ecr = false and a pipeline has no ecr_repository_url. Images are expected at <existing_ecr_base_url>/<env>-<service>. Example: 123456789.dkr.ecr.eu-central-1.amazonaws.com. Also the imageRegistry passed to the ekai-saas chart for cicd_provider = \"none\"."
+  description = "Used when create_ecr = false and a pipeline has no ecr_repository_url. Images are expected at <existing_ecr_base_url>/<env>-<service>. Example: 123456789.dkr.ecr.eu-central-1.amazonaws.com. Also the imageRegistry passed to the ekai-saas chart for cicd_provider = \"none\" -- there, the chart pulls each service from its own repo under this base, all under a shared \"ekai/\" namespace (e.g. \"<existing_ecr_base_url>/ekai/ekai-backend\")."
   type        = string
   default     = null
 }
