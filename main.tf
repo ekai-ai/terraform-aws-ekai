@@ -30,6 +30,16 @@
 # root already pointing at a live cluster).
 # ──────────────────────────────────────────────────────────────────────────────
 
+locals {
+  # Derived from env unless explicitly overridden -- so two self-service
+  # deployments in the same AWS account never collide on the same Secrets
+  # Manager secret name. Must match ../cicd/main.tf's own derivation of the
+  # same value exactly (cicd is a separate apply/state and creates the
+  # secret; this root only needs the same name to scope ESO's IRSA read
+  # access to it).
+  customer_secret_name = coalesce(var.customer_secret_name, "ekai-${var.env}")
+}
+
 module "bootstrap" {
   source = "./modules/bootstrap"
 
@@ -84,7 +94,7 @@ module "platform" {
   argocd_namespace                 = var.argocd_namespace
   argocd_admin_password_hashed     = var.argocd_admin_password_hashed
   cicd_provider                    = var.cicd_provider
-  customer_secret_name             = var.customer_secret_name
+  customer_secret_name             = local.customer_secret_name
   argocd_ingress_host              = var.argocd_ingress_host
   dns_zone                         = var.dns_zone
   eso_chart_version                = var.eso_chart_version

@@ -42,9 +42,9 @@ variable "secrets_name" {
 }
 
 variable "customer_secret_name" {
-  description = "AWS Secrets Manager secret name Terraform creates and holds every env var every service needs (cicd_provider = \"none\" only). Terraform creates this secret directly — override only if the client wants a different naming convention."
+  description = "AWS Secrets Manager secret name Terraform creates and holds every env var every service needs (cicd_provider = \"none\" only). Defaults to \"ekai-<env>\" -- override only if the client wants a different naming convention."
   type        = string
-  default     = "ekai-customer"
+  default     = null
 }
 
 variable "shared_service_account_name" {

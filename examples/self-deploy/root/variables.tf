@@ -31,8 +31,9 @@ variable "dns_zone" {
 }
 
 variable "eks_cluster_name" {
-  description = "Base EKS cluster name (e.g. \"ekai-eks\") — used to tag subnets for ALB/ELB discovery and as the prefix for the full cluster name (<name>-saas-<env>)."
+  description = "Base EKS cluster name — used to tag subnets for ALB/ELB discovery and as the prefix for the full cluster name (<name>-saas-<env>, so env is always baked in regardless of this value). Defaults to \"ekai-eks\"."
   type        = string
+  default     = "ekai-eks"
 }
 
 variable "secrets_name" {
@@ -42,9 +43,9 @@ variable "secrets_name" {
 }
 
 variable "customer_secret_name" {
-  description = "AWS Secrets Manager secret name Terraform creates and holds every env var every service needs (cicd_provider = \"none\" only, created by the cicd submodule). Terraform creates this secret directly — override only if the client wants a different naming convention."
+  description = "AWS Secrets Manager secret name Terraform creates and holds every env var every service needs (cicd_provider = \"none\" only, created by the cicd submodule). Defaults to \"ekai-<env>\" -- override only if the client wants a different naming convention."
   type        = string
-  default     = "ekai-customer"
+  default     = null
 }
 
 variable "argocd_ingress_host" {

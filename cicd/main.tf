@@ -24,6 +24,14 @@ data "terraform_remote_state" "combined" {
   }
 }
 
+locals {
+  # Derived from env unless explicitly overridden -- must match ../main.tf's
+  # own derivation of the same value exactly (that root only reads this name
+  # to scope ESO's IRSA read access; this config is what actually creates
+  # the secret).
+  customer_secret_name = coalesce(var.customer_secret_name, "ekai-${var.env}")
+}
+
 module "cicd" {
   source = "../modules/cicd"
 
@@ -32,7 +40,7 @@ module "cicd" {
   argocd_ingress_host         = var.argocd_ingress_host
   dns_zone                    = var.dns_zone
   secrets_name                = var.secrets_name
-  customer_secret_name        = var.customer_secret_name
+  customer_secret_name        = local.customer_secret_name
   shared_service_account_name = var.shared_service_account_name
   image_tag                   = var.image_tag
   erd_storage_class           = var.erd_storage_class

@@ -43,9 +43,9 @@ variable "customer_secret_name" {
     Same value as the cicd submodule's customer_secret_name (the root
     module's single tfvars file is shared across all 4 submodules) — only
     used here (cicd_provider = "none") to also scope the ESO IRSA role's
-    Secrets Manager read access to this secret. It doesn't follow the
-    "<env>-*" naming convention every other secret in this codebase uses, so
-    modules/eso's policy needs it explicitly. Ignored otherwise.
+    Secrets Manager read access to this secret. Defaults to "ekai-<env>" when
+    unset, matching the cicd submodule's own derivation of the same value.
+    Ignored otherwise.
   EOT
   type        = string
   default     = "ekai-customer"

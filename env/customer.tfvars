@@ -42,9 +42,10 @@ region = "us-east-1"
 # (ekai-eks-saas-<env>, ekai-terraform-<env> IAM user, the state bucket, ...).
 # Re-running with the same value modifies THIS deployment, not a new one.
 env = "customer"
-# Base EKS cluster name -- combined with env to form the real cluster name
-# (ekai-eks-saas-<env>). Rarely needs changing.
-eks_cluster_name = "ekai-eks"
+
+# eks_cluster_name intentionally left unset -- defaults to "ekai-eks",
+# combined with env to form the real cluster name (ekai-eks-saas-<env>).
+# Rarely needs changing.
 
 # VPC CIDR + its subnets. Defaults are large enough for this stack; only
 # change these if they'd conflict with a network you're peering/connecting to.
@@ -121,6 +122,6 @@ image_tag             = "latest"
 helm_chart_repo_url = "public.ecr.aws/s7m9t1b0/ekai-helm"
 helm_chart_version  = "*"
 
-# customer_secret_name defaults to "ekai-customer" — left as default.
+# customer_secret_name defaults to "ekai-<env>" — left as default.
 # shared_service_account_name defaults to "ekai-app-sa" — left as default.
 # erd_storage_class defaults to "gp3" — left as default.

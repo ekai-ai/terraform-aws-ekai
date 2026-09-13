@@ -20,7 +20,7 @@ variable "chart_version" {
 }
 
 variable "customer_secret_name" {
-  description = "Self-service-only customer secret name (e.g. \"ekai-customer\") to additionally grant read access to -- it doesn't follow the \"<env>-*\" naming convention every other secret uses. Blank skips this grant entirely."
+  description = "Self-service-only customer secret name (e.g. \"ekai-<env>\") to additionally grant read access to. Blank skips this grant entirely."
   type        = string
   default     = ""
 }
