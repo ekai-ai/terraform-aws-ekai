@@ -18,18 +18,33 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
 ENV="${1:?Usage: $0 <env> <region> [--yes]}"
 REGION="${2:?Usage: $0 <env> <region> [--yes]}"
 AUTO_YES="${3:-}"
 
-BUCKET="ekai-terraform-state-${ENV}-${REGION}"
+# Env value from tfvars — may differ from ENV (the tfvars filename), e.g.
+# env/umar.tfvars containing env = "umar-test". The state bucket was
+# actually created/named using this value, not necessarily this script's
+# ENV argument — see init-state-backend.sh. Falls back to ENV as-is when
+# no matching tfvars file exists (this script is also runnable standalone).
+ENV_PREFIX="${ENV}"
+TFVARS="${REPO_ROOT}/env/${ENV}.tfvars"
+if [[ -f "${TFVARS}" ]]; then
+  FOUND=$(grep -E '^env\s*=' "${TFVARS}" | head -1 | sed 's/.*=\s*"\(.*\)".*/\1/' || true)
+  [[ -n "${FOUND}" ]] && ENV_PREFIX="${FOUND}"
+fi
+
+BUCKET="ekai-terraform-state-${ENV_PREFIX}-${REGION}"
 
 if [ "$AUTO_YES" != "--yes" ]; then
   echo "WARNING: This will permanently delete:"
   echo "  - S3 state bucket   : $BUCKET"
-  echo "  - ECR repositories  : ${ENV}-*"
-  echo "  - CW log groups     : /aws/eks/${ENV}* and /ekai/${ENV}*"
-  echo "  - Secrets Manager   : ${ENV}-ekai-db-credentials only (client secrets preserved)"
+  echo "  - ECR repositories  : ${ENV_PREFIX}-*"
+  echo "  - CW log groups     : /aws/eks/${ENV_PREFIX}* and /ekai/${ENV_PREFIX}*"
+  echo "  - Secrets Manager   : ${ENV_PREFIX}-ekai-db-credentials only (client secrets preserved)"
   echo ""
   read -rp "Type 'yes' to continue: " confirm
   [ "$confirm" = "yes" ] || { echo "Aborted."; exit 0; }
@@ -67,9 +82,9 @@ fi
 
 # 2. Force-delete ECR repositories (removes all images)
 echo ""
-echo "[2/4] Deleting ECR repositories: ${ENV}-*"
+echo "[2/4] Deleting ECR repositories: ${ENV_PREFIX}-*"
 REPOS=$(aws ecr describe-repositories --region "$REGION" \
-  --query "repositories[?starts_with(repositoryName, '${ENV}-')].repositoryName" \
+  --query "repositories[?starts_with(repositoryName, '${ENV_PREFIX}-')].repositoryName" \
   --output text 2>/dev/null || true)
 if [ -z "$REPOS" ]; then
   echo "  No repositories found"
@@ -83,7 +98,7 @@ fi
 # 3. Delete CloudWatch log groups
 echo ""
 echo "[3/4] Deleting CloudWatch log groups"
-for PREFIX in "/aws/eks/${ENV}" "/ekai/${ENV}" "/aws/codebuild/${ENV}"; do
+for PREFIX in "/aws/eks/${ENV_PREFIX}" "/ekai/${ENV_PREFIX}" "/aws/codebuild/${ENV_PREFIX}"; do
   LGS=$(aws logs describe-log-groups --region "$REGION" \
     --log-group-name-prefix "$PREFIX" \
     --query 'logGroups[*].logGroupName' --output text 2>/dev/null || true)
@@ -94,11 +109,11 @@ for PREFIX in "/aws/eks/${ENV}" "/ekai/${ENV}" "/aws/codebuild/${ENV}"; do
 done
 
 # 4. Force-delete master DB credentials secret only.
-# Client-managed per-service secrets (${ENV}-ekai-backend, ${ENV}-ekai-erd, etc.)
+# Client-managed per-service secrets (${ENV_PREFIX}-ekai-backend, ${ENV_PREFIX}-ekai-erd, etc.)
 # are intentionally preserved — client owns them.
 echo ""
-echo "[4/4] Deleting master secret: ${ENV}-ekai-db-credentials"
-MASTER_SECRET="${ENV}-ekai-db-credentials"
+echo "[4/4] Deleting master secret: ${ENV_PREFIX}-ekai-db-credentials"
+MASTER_SECRET="${ENV_PREFIX}-ekai-db-credentials"
 if aws secretsmanager describe-secret --secret-id "$MASTER_SECRET" \
     --region "$REGION" > /dev/null 2>&1; then
   aws secretsmanager delete-secret --secret-id "$MASTER_SECRET" \

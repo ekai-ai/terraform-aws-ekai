@@ -45,7 +45,18 @@ if [[ -z "${REGION}" ]]; then
   exit 1
 fi
 
-BUCKET="ekai-terraform-state-${ENV}-${REGION}"
+# Env value from tfvars — may differ from the ENV argument (the tfvars
+# filename), e.g. env/umar.tfvars containing env = "umar-test". Used below
+# for both the bucket name and the state key, so it always matches what
+# cicd/main.tf's own data "terraform_remote_state" "combined" block computes
+# ("ekai-terraform-state-${var.env}-${var.region}") -- that data source has
+# no access to this script's ENV argument, only to var.env.
+ENV_PREFIX=$(grep -E '^env\s*=' "${TFVARS}" | head -1 | sed 's/.*=\s*"\(.*\)".*/\1/')
+if [[ -z "${ENV_PREFIX}" ]]; then
+  ENV_PREFIX="${ENV}"
+fi
+
+BUCKET="ekai-terraform-state-${ENV_PREFIX}-${REGION}"
 echo "==> State bucket: ${BUCKET} (region: ${REGION})"
 
 # ── Create or verify S3 bucket ────────────────────────────────────────────────
@@ -101,7 +112,7 @@ ROOT_BACKEND_FILE="${ENV_DIR}/backend-${ENV}.tfbackend"
 echo "==> Writing ${ROOT_BACKEND_FILE}..."
 cat > "${ROOT_BACKEND_FILE}" <<EOF
 bucket  = "${BUCKET}"
-key     = "${ENV}/combined.tfstate"
+key     = "${ENV_PREFIX}/combined.tfstate"
 region  = "${REGION}"
 encrypt = true
 EOF
@@ -110,7 +121,7 @@ CICD_BACKEND_FILE="${ENV_DIR}/backend-${ENV}-cicd.tfbackend"
 echo "==> Writing ${CICD_BACKEND_FILE}..."
 cat > "${CICD_BACKEND_FILE}" <<EOF
 bucket  = "${BUCKET}"
-key     = "${ENV}/cicd.tfstate"
+key     = "${ENV_PREFIX}/cicd.tfstate"
 region  = "${REGION}"
 encrypt = true
 EOF
