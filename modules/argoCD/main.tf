@@ -27,6 +27,24 @@ resource "helm_release" "argocd" {
   ]
 }
 
+# Watches images referenced by Applications that carry
+# argocd-image-updater.argoproj.io/* annotations (self-service's ekai-saas
+# app only — see modules/ekai_CD) and patches the Application's Helm
+# parameters when a tracked tag's digest changes, so a new push to a mutable
+# tag like "latest" actually triggers a sync instead of ArgoCD seeing no
+# diff. A no-op for any Application without those annotations, so this is
+# safe to install unconditionally alongside ArgoCD itself.
+resource "helm_release" "argocd_image_updater" {
+  name            = "argocd-image-updater"
+  namespace       = kubernetes_namespace.argocd.metadata[0].name
+  chart           = "argocd-image-updater"
+  repository      = "https://argoproj.github.io/argo-helm"
+  timeout         = 1800
+  cleanup_on_fail = true
+
+  depends_on = [helm_release.argocd]
+}
+
 # Mirrors the Azure argocd module pattern exactly.
 # force_conflicts = true takes ownership of ArgoCD's auto-created AppProject.
 # Setting finalizers = [] ensures the finalizer is stripped on the APPLY pass
