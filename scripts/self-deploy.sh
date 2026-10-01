@@ -178,7 +178,7 @@ cat > "${POLICY_DIR}/infra.json" <<'POLICY'
     { "Sid": "IAMServiceLinkedRole", "Effect": "Allow", "Action": "iam:CreateServiceLinkedRole",
       "Resource": "arn:aws:iam::ACCOUNT_ID:role/aws-service-role/*",
       "Condition": { "StringEquals": { "iam:AWSServiceName": [
-        "eks.amazonaws.com","elasticloadbalancing.amazonaws.com","ec2.amazonaws.com","rds.amazonaws.com"
+        "eks.amazonaws.com","eks-nodegroup.amazonaws.com","elasticloadbalancing.amazonaws.com","ec2.amazonaws.com","rds.amazonaws.com"
       ] } } }
   ]
 }
