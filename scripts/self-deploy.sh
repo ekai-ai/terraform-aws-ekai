@@ -465,43 +465,37 @@ terraform init -upgrade -reconfigure -backend-config="../../../env/backend-${ENV
 # zone is out-of-band and human-timed -- Terraform has no access to do it
 # for you. Until it's done, ACM certificate validation (DNS-01 style CNAME)
 # can't succeed -- and that validation (aws_acm_certificate_validation) is
-# itself one of the resources THIS SAME apply creates, so it hangs for a
-# very long time before ever reporting failure, with no chance for the
-# script to prompt for delegation afterward -- it never gets that far.
+# one of the resources the full apply below creates, so it hangs for a very
+# long time before ever reporting failure, with no chance to prompt for
+# delegation afterward -- it never gets that far.
 #
-# Fix: run this apply in the background and prompt for delegation
-# concurrently. The Route53 zone has no dependencies, so Terraform creates
-# it (and its nameservers) within the first few seconds -- `terraform
-# output` reads state directly and needs no lock, so it can see that zone's
-# nameservers immediately, long before the backgrounded apply's own
-# aws_acm_certificate_validation resource ever finishes waiting on it.
-# Same class of issue GCP's self-deploy.sh checks for (cert-manager's ACME
-# challenge) -- see that script's comments.
-trap 'kill "${APPLY_PID:-}" 2>/dev/null' EXIT
-terraform apply -auto-approve -compact-warnings -var-file="../../../env/${ENV}.tfvars" &
-APPLY_PID=$!
-
+# Fix: apply -target just the zone first. It has no dependencies, so this
+# is fast, and returns normally with full live output. (An earlier version
+# of this script instead backgrounded the full apply and polled `terraform
+# output` concurrently -- that avoided the hang, but running terraform
+# non-interactively like that silences its normal progress output until
+# the whole apply exits, which looks exactly like a hang and isn't worth
+# the confusion -- confirmed live, not just reasoned about.) Once the zone
+# exists we can prompt for delegation as a plain, ordinary foreground step,
+# then run the real apply below completely normally -- by then delegation
+# is already done/propagating, so its cert validation succeeds on its own
+# same as it always does. Same class of issue GCP's self-deploy.sh checks
+# for (cert-manager's ACME challenge).
 MANAGE_DNS_ZONE=$(grep -E '^manage_dns_zone\s*=' "${TFVARS}" | head -1 | sed 's/.*=\s*\(true\|false\).*/\1/')
 if [[ "${MANAGE_DNS_ZONE}" == "true" ]]; then
   DNS_ZONE=$(grep -E '^dns_zone\s*=' "${TFVARS}" | head -1 | sed 's/.*=\s*"\(.*\)".*/\1/')
-  echo "==> Waiting for Terraform to create the Route53 zone for ${DNS_ZONE}..."
-  ZONE_NS=""
-  for i in $(seq 1 40); do
-    ZONE_NS=$(terraform output -json route53_name_servers 2>/dev/null | jq -r '.[]' | sed 's/\.$//' | sort)
-    [[ -n "${ZONE_NS}" ]] && break
-    sleep 15
-  done
+  echo "==> Creating the Route53 zone for ${DNS_ZONE} first (needed before delegation can happen)..."
+  terraform apply -auto-approve -compact-warnings \
+    -target=module.infra.module.bootstrap.aws_route53_zone.main \
+    -var-file="../../../env/${ENV}.tfvars"
+  ZONE_NS=$(terraform output -json route53_name_servers 2>/dev/null | jq -r '.[]' | sed 's/\.$//' | sort)
   if [[ -n "${ZONE_NS}" ]]; then
     echo
     echo "════════ DNS delegation required ════════"
-    echo "Terraform just created a Route53 zone for ${DNS_ZONE}. Add an NS"
-    echo "record for ${DNS_ZONE} at your domain registrar (or your parent DNS"
-    echo "zone) pointing at each of these nameservers:"
+    echo "Add an NS record for ${DNS_ZONE} at your domain registrar (or your"
+    echo "parent DNS zone) pointing at each of these nameservers:"
     echo "${ZONE_NS}" | sed 's/^/  /'
     echo
-    echo "The apply above keeps running in the background while you do this —"
-    echo "don't Ctrl-C this script; its aws_acm_certificate_validation resource"
-    echo "just keeps polling on its own and will succeed once delegation propagates."
     read -rp "Press Enter once you've added it " _
     echo "==> Checking DNS delegation (this can take several minutes to propagate)..."
     # Strip trailing dots on both sides before comparing -- Route53's own API
@@ -520,24 +514,17 @@ if [[ "${MANAGE_DNS_ZONE}" == "true" ]]; then
     done
     if [[ "${RESOLVED}" != "${ZONE_NS}" ]]; then
       echo "⚠ Still not resolving after 10 minutes — ACM certificate validation"
-      echo "  will keep failing until this delegation is correct. No need to"
-      echo "  re-run this script for that; the validation resource keeps"
+      echo "  below will keep failing until this delegation is correct. No need"
+      echo "  to re-run this script for that; the validation resource keeps"
       echo "  waiting on its own once delegation is fixed."
     fi
   else
-    echo "⚠ Route53 zone didn't show up in Terraform output after 10 minutes —"
-    echo "  something else may be wrong; check the apply output above/below."
+    echo "⚠ Route53 zone wasn't in Terraform output after that apply —"
+    echo "  something unexpected happened; check the output above before continuing."
   fi
 fi
 
-echo "==> Waiting for the bootstrap/cluster/platform apply to finish..."
-wait "${APPLY_PID}"
-APPLY_EXIT=$?
-trap - EXIT
-if [[ ${APPLY_EXIT} -ne 0 ]]; then
-  echo "ERROR: terraform apply (bootstrap + cluster + platform) failed (exit ${APPLY_EXIT})."
-  exit "${APPLY_EXIT}"
-fi
+terraform apply -auto-approve -compact-warnings -var-file="../../../env/${ENV}.tfvars"
 
 echo
 echo "════════ terraform apply (cicd) ════════"
