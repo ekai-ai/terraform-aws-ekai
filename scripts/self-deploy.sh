@@ -459,25 +459,38 @@ echo
 echo "════════ terraform apply (bootstrap + cluster + platform) ════════"
 cd "${REPO_ROOT}/examples/self-deploy/root"
 terraform init -upgrade -reconfigure -backend-config="../../../env/backend-${ENV}.tfbackend"
-terraform apply -auto-approve -compact-warnings -var-file="../../../env/${ENV}.tfvars"
 
-# ── DNS delegation — only when Terraform just created a NEW Route53 zone.
-# Delegating dns_zone to AWS's nameservers at your registrar/parent zone is
-# out-of-band and human-timed -- Terraform has no access to do it for you.
-# Until it's done, ACM certificate validation (DNS-01 style CNAME) can't
-# succeed, and every later Terraform action that waits on that cert
-# (aws_acm_certificate_validation) hangs for a very long time before ever
-# reporting failure. Same class of issue GCP's self-deploy.sh checks for
-# (cert-manager's ACME challenge) -- see that script's comments.
+# ── DNS delegation — only when Terraform is about to create a NEW Route53
+# zone. Delegating dns_zone to AWS's nameservers at your registrar/parent
+# zone is out-of-band and human-timed -- Terraform has no access to do it
+# for you. Until it's done, ACM certificate validation (DNS-01 style CNAME)
+# can't succeed -- and that validation (aws_acm_certificate_validation) is
+# itself one of the resources THIS SAME apply creates, so it hangs for a
+# very long time before ever reporting failure, with no chance for the
+# script to prompt for delegation afterward -- it never gets that far.
+#
+# Fix: run this apply in the background and prompt for delegation
+# concurrently. The Route53 zone has no dependencies, so Terraform creates
+# it (and its nameservers) within the first few seconds -- `terraform
+# output` reads state directly and needs no lock, so it can see that zone's
+# nameservers immediately, long before the backgrounded apply's own
+# aws_acm_certificate_validation resource ever finishes waiting on it.
+# Same class of issue GCP's self-deploy.sh checks for (cert-manager's ACME
+# challenge) -- see that script's comments.
+trap 'kill "${APPLY_PID:-}" 2>/dev/null' EXIT
+terraform apply -auto-approve -compact-warnings -var-file="../../../env/${ENV}.tfvars" &
+APPLY_PID=$!
+
 MANAGE_DNS_ZONE=$(grep -E '^manage_dns_zone\s*=' "${TFVARS}" | head -1 | sed 's/.*=\s*\(true\|false\).*/\1/')
 if [[ "${MANAGE_DNS_ZONE}" == "true" ]]; then
   DNS_ZONE=$(grep -E '^dns_zone\s*=' "${TFVARS}" | head -1 | sed 's/.*=\s*"\(.*\)".*/\1/')
-  # Strip trailing dots on both sides before comparing -- Route53's own API
-  # (and this output) return bare hostnames with no trailing dot, but dig
-  # always returns FQDNs with one; normalizing both avoids a false
-  # "not propagated" mismatch either way. Verified against real Route53
-  # zones and real dig output before shipping this (not just a syntax check).
-  ZONE_NS=$(terraform output -json route53_name_servers 2>/dev/null | jq -r '.[]' | sed 's/\.$//' | sort)
+  echo "==> Waiting for Terraform to create the Route53 zone for ${DNS_ZONE}..."
+  ZONE_NS=""
+  for i in $(seq 1 40); do
+    ZONE_NS=$(terraform output -json route53_name_servers 2>/dev/null | jq -r '.[]' | sed 's/\.$//' | sort)
+    [[ -n "${ZONE_NS}" ]] && break
+    sleep 15
+  done
   if [[ -n "${ZONE_NS}" ]]; then
     echo
     echo "════════ DNS delegation required ════════"
@@ -486,8 +499,16 @@ if [[ "${MANAGE_DNS_ZONE}" == "true" ]]; then
     echo "zone) pointing at each of these nameservers:"
     echo "${ZONE_NS}" | sed 's/^/  /'
     echo
-    read -rp "Press Enter once you've added it (Ctrl-C to do this later and re-run) " _
+    echo "The apply above keeps running in the background while you do this —"
+    echo "don't Ctrl-C this script; its aws_acm_certificate_validation resource"
+    echo "just keeps polling on its own and will succeed once delegation propagates."
+    read -rp "Press Enter once you've added it " _
     echo "==> Checking DNS delegation (this can take several minutes to propagate)..."
+    # Strip trailing dots on both sides before comparing -- Route53's own API
+    # (and this output) return bare hostnames with no trailing dot, but dig
+    # always returns FQDNs with one; normalizing both avoids a false
+    # "not propagated" mismatch either way. Verified against real Route53
+    # zones and real dig output before shipping this (not just a syntax check).
     for i in $(seq 1 40); do
       RESOLVED=$(dig +short NS "${DNS_ZONE}" @8.8.8.8 2>/dev/null | sed 's/\.$//' | sort)
       if [[ -n "${RESOLVED}" && "${RESOLVED}" == "${ZONE_NS}" ]]; then
@@ -503,7 +524,19 @@ if [[ "${MANAGE_DNS_ZONE}" == "true" ]]; then
       echo "  re-run this script for that; the validation resource keeps"
       echo "  waiting on its own once delegation is fixed."
     fi
+  else
+    echo "⚠ Route53 zone didn't show up in Terraform output after 10 minutes —"
+    echo "  something else may be wrong; check the apply output above/below."
   fi
+fi
+
+echo "==> Waiting for the bootstrap/cluster/platform apply to finish..."
+wait "${APPLY_PID}"
+APPLY_EXIT=$?
+trap - EXIT
+if [[ ${APPLY_EXIT} -ne 0 ]]; then
+  echo "ERROR: terraform apply (bootstrap + cluster + platform) failed (exit ${APPLY_EXIT})."
+  exit "${APPLY_EXIT}"
 fi
 
 echo
