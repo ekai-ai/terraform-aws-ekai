@@ -5,8 +5,8 @@
 #      (argocd_url/admin creds, route53 info, vpc_id, eks_cluster_name, region).
 #
 #   2. Values ../cicd/'s `data "terraform_remote_state" "combined"` block
-#      reads (cluster_endpoint, cluster_ca, aws_account_id, backend/semantics
-#      db creds, rds_endpoint, subnet ids, rds_sg_id, oidc_issuer,
+#      reads (cluster_endpoint, cluster_ca, aws_account_id, backend db creds,
+#      rds_endpoint, subnet ids, rds_sg_id, oidc_issuer,
 #      ssl_certificate_arn, argocd_admin_password_plaintext,
 #      redis_credentials, neo4j_credentials, cluster_secret_store_name) —
 #      these exist here ONLY because ../cicd/ needs them; a human applying
@@ -106,25 +106,8 @@ output "backend_db_name" {
   value       = module.cluster.backend_db_name
 }
 
-output "semantics_db_username" {
-  description = "Semantics RDS DB username (cicd_provider = \"none\" only). Read by ../cicd/ to build VECTOR_DATABASE_URL."
-  value       = module.cluster.semantics_db_username
-  sensitive   = true
-}
-
-output "semantics_db_password" {
-  description = "Semantics RDS DB password (cicd_provider = \"none\" only). Read by ../cicd/ to build VECTOR_DATABASE_URL."
-  value       = module.cluster.semantics_db_password
-  sensitive   = true
-}
-
-output "semantics_db_name" {
-  description = "Semantics RDS DB name (cicd_provider = \"none\" only). Read by ../cicd/ to build VECTOR_DATABASE_URL."
-  value       = module.cluster.semantics_db_name
-}
-
 output "rds_endpoint" {
-  description = "RDS PostgreSQL endpoint (host:port). Read by ../cicd/ to build DATABASE_URL/VECTOR_DATABASE_URL."
+  description = "RDS PostgreSQL endpoint (host:port). Read by ../cicd/ to build DATABASE_URL."
   value       = module.cluster.rds_endpoint
 }
 

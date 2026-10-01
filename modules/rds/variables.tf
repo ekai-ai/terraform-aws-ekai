@@ -56,7 +56,7 @@ variable "secrets_name" {
 }
 
 variable "self_service" {
-  description = "true for cicd_provider = \"none\" — generates backend/semantics DB credentials directly instead of requiring a pre-existing Secrets Manager secret."
+  description = "true for cicd_provider = \"none\" — generates backend DB credentials directly instead of requiring a pre-existing Secrets Manager secret."
   type        = bool
   default     = false
 }

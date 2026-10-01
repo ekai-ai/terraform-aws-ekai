@@ -69,19 +69,16 @@ module "cicd" {
 
   # formerly `data "terraform_remote_state" "cluster"` in the original
   # 04-cicd/main.tf — now reads the combined root's state instead
-  aws_account_id        = data.terraform_remote_state.combined.outputs.aws_account_id
-  backend_db_username   = data.terraform_remote_state.combined.outputs.backend_db_username
-  backend_db_password   = data.terraform_remote_state.combined.outputs.backend_db_password
-  backend_db_name       = data.terraform_remote_state.combined.outputs.backend_db_name
-  semantics_db_username = data.terraform_remote_state.combined.outputs.semantics_db_username
-  semantics_db_password = data.terraform_remote_state.combined.outputs.semantics_db_password
-  semantics_db_name     = data.terraform_remote_state.combined.outputs.semantics_db_name
-  rds_endpoint          = data.terraform_remote_state.combined.outputs.rds_endpoint
-  public_subnet_ids     = data.terraform_remote_state.combined.outputs.public_subnet_ids
-  vpc_id                = data.terraform_remote_state.combined.outputs.vpc_id
-  private_subnet_ids    = data.terraform_remote_state.combined.outputs.private_subnet_ids
-  rds_sg_id             = data.terraform_remote_state.combined.outputs.rds_sg_id
-  oidc_issuer           = data.terraform_remote_state.combined.outputs.oidc_issuer
+  aws_account_id      = data.terraform_remote_state.combined.outputs.aws_account_id
+  backend_db_username = data.terraform_remote_state.combined.outputs.backend_db_username
+  backend_db_password = data.terraform_remote_state.combined.outputs.backend_db_password
+  backend_db_name     = data.terraform_remote_state.combined.outputs.backend_db_name
+  rds_endpoint        = data.terraform_remote_state.combined.outputs.rds_endpoint
+  public_subnet_ids   = data.terraform_remote_state.combined.outputs.public_subnet_ids
+  vpc_id              = data.terraform_remote_state.combined.outputs.vpc_id
+  private_subnet_ids  = data.terraform_remote_state.combined.outputs.private_subnet_ids
+  rds_sg_id           = data.terraform_remote_state.combined.outputs.rds_sg_id
+  oidc_issuer         = data.terraform_remote_state.combined.outputs.oidc_issuer
 
   # formerly `data "terraform_remote_state" "platform"` in the original
   # 04-cicd/main.tf

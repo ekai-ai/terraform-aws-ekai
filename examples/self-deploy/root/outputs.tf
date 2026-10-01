@@ -83,25 +83,8 @@ output "backend_db_name" {
   value       = module.infra.backend_db_name
 }
 
-output "semantics_db_username" {
-  description = "Semantics RDS DB username (cicd_provider = \"none\" only). Read by the cicd module to build VECTOR_DATABASE_URL."
-  value       = module.infra.semantics_db_username
-  sensitive   = true
-}
-
-output "semantics_db_password" {
-  description = "Semantics RDS DB password (cicd_provider = \"none\" only). Read by the cicd module to build VECTOR_DATABASE_URL."
-  value       = module.infra.semantics_db_password
-  sensitive   = true
-}
-
-output "semantics_db_name" {
-  description = "Semantics RDS DB name (cicd_provider = \"none\" only). Read by the cicd module to build VECTOR_DATABASE_URL."
-  value       = module.infra.semantics_db_name
-}
-
 output "rds_endpoint" {
-  description = "RDS PostgreSQL endpoint (host:port). Read by the cicd module to build DATABASE_URL/VECTOR_DATABASE_URL."
+  description = "RDS PostgreSQL endpoint (host:port). Read by the cicd module to build DATABASE_URL."
   value       = module.infra.rds_endpoint
 }
 

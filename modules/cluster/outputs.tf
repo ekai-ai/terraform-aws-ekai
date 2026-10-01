@@ -64,8 +64,8 @@ output "rds_sg_id" {
   value       = module.rds.rds_SG_ID
 }
 
-# cicd_provider = "none" only — 04-cicd builds DATABASE_URL/VECTOR_DATABASE_URL
-# from these instead of reading a master Secrets Manager secret.
+# cicd_provider = "none" only — 04-cicd builds DATABASE_URL from these
+# instead of reading a master Secrets Manager secret.
 output "backend_db_username" {
   value     = module.rds.backend_db_username
   sensitive = true
@@ -78,20 +78,6 @@ output "backend_db_password" {
 
 output "backend_db_name" {
   value = module.rds.backend_db_name
-}
-
-output "semantics_db_username" {
-  value     = module.rds.semantics_db_username
-  sensitive = true
-}
-
-output "semantics_db_password" {
-  value     = module.rds.semantics_db_password
-  sensitive = true
-}
-
-output "semantics_db_name" {
-  value = module.rds.semantics_db_name
 }
 
 output "aws_account_id" {

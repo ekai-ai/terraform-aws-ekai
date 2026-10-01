@@ -242,26 +242,6 @@ variable "backend_db_name" {
   default     = ""
 }
 
-variable "semantics_db_username" {
-  description = "Semantics RDS DB username (sourced from the cluster submodule's output, self-service only)"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "semantics_db_password" {
-  description = "Semantics RDS DB password (sourced from the cluster submodule's output, self-service only)"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "semantics_db_name" {
-  description = "Semantics RDS DB name (sourced from the cluster submodule's output, self-service only)"
-  type        = string
-  default     = ""
-}
-
 variable "rds_endpoint" {
   description = "RDS PostgreSQL endpoint (host:port) (sourced from the cluster submodule's output)"
   type        = string

@@ -48,19 +48,10 @@ resource "random_password" "backend_db" {
   special = false
 }
 
-resource "random_password" "semantics_db" {
-  count   = var.self_service ? 1 : 0
-  length  = 24
-  special = false
-}
-
 locals {
-  backend_db_username   = var.self_service ? "ekai_backend" : jsondecode(data.aws_secretsmanager_secret_version.ekai-db[0].secret_string)["backend_db_username"]
-  backend_db_password   = var.self_service ? random_password.backend_db[0].result : jsondecode(data.aws_secretsmanager_secret_version.ekai-db[0].secret_string)["backend_db_password"]
-  backend_db_name       = var.self_service ? "ekai_backend" : jsondecode(data.aws_secretsmanager_secret_version.ekai-db[0].secret_string)["backend_db_name"]
-  semantics_db_name     = var.self_service ? "ekai_semantics" : jsondecode(data.aws_secretsmanager_secret_version.ekai-db[0].secret_string)["semantics_db_name"]
-  semantics_db_username = var.self_service ? "ekai_semantics" : jsondecode(data.aws_secretsmanager_secret_version.ekai-db[0].secret_string)["semantics_db_username"]
-  semantics_db_password = var.self_service ? random_password.semantics_db[0].result : jsondecode(data.aws_secretsmanager_secret_version.ekai-db[0].secret_string)["semantics_db_password"]
+  backend_db_username = var.self_service ? "ekai_backend" : jsondecode(data.aws_secretsmanager_secret_version.ekai-db[0].secret_string)["backend_db_username"]
+  backend_db_password = var.self_service ? random_password.backend_db[0].result : jsondecode(data.aws_secretsmanager_secret_version.ekai-db[0].secret_string)["backend_db_password"]
+  backend_db_name     = var.self_service ? "ekai_backend" : jsondecode(data.aws_secretsmanager_secret_version.ekai-db[0].secret_string)["backend_db_name"]
 }
 resource "aws_db_instance" "ekai_postgresql" {
   allocated_storage   = var.allocated_storage
