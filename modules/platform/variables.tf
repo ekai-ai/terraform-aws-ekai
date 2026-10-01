@@ -218,6 +218,16 @@ variable "vpc_id" {
   type        = string
 }
 
+variable "private_subnet_ids" {
+  description = "Private subnet IDs (sourced from the cluster submodule's output) -- EFS mount targets go here, one per subnet."
+  type        = list(string)
+}
+
+variable "vpc_cidr" {
+  description = "VPC CIDR block (sourced from the cluster submodule's output) -- used to scope the EFS security group's NFS ingress, same pattern as modules/rds's Postgres ingress."
+  type        = string
+}
+
 variable "eks_cluster_name" {
   description = "Full EKS cluster name (sourced from the cluster submodule's output)"
   type        = string

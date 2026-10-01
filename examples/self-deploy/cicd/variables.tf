@@ -55,9 +55,15 @@ variable "image_tag" {
 }
 
 variable "erd_storage_class" {
-  description = "StorageClass for ERD's workspace PVC (cicd_provider = \"none\" only) — passed through as the ekai-saas chart's erd.workspace.storageClassName."
+  description = "StorageClass for ERD's workspace PVC (cicd_provider = \"none\" only) — passed through as the ekai-saas chart's erd.workspace.storageClassName. Ignored when enable_erd_efs = true."
   type        = string
   default     = "gp3"
+}
+
+variable "enable_erd_efs" {
+  description = "Back ERD's shared workspace with EFS instead of a ReadWriteOnce EBS-backed PVC (cicd_provider = \"none\" only). Defaults to true -- this repo is AWS-only."
+  type        = bool
+  default     = true
 }
 
 variable "ingress_class_name" {

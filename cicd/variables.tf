@@ -60,10 +60,21 @@ variable "image_tag" {
 }
 
 variable "erd_storage_class" {
-  description = "StorageClass for ERD's workspace PVC (cicd_provider = \"none\" only) — passed through as the ekai-saas chart's erd.workspace.storageClassName."
+  description = "StorageClass for ERD's workspace PVC (cicd_provider = \"none\" only) — passed through as the ekai-saas chart's erd.workspace.storageClassName. Ignored when enable_erd_efs = true."
   type        = string
   default     = "gp3"
 }
+
+variable "enable_erd_efs" {
+  description = "Back ERD's shared workspace with EFS instead of a ReadWriteOnce EBS-backed PVC (cicd_provider = \"none\" only). Defaults to true -- this repo is AWS-only."
+  type        = bool
+  default     = true
+}
+
+# erd_efs_file_system_id / erd_efs_access_point_id are NOT declared here --
+# same as rds_endpoint/oidc_issuer above, they're read straight from
+# data.terraform_remote_state.combined.outputs.* in main.tf, not passed in
+# as tfvars (the platform layer already computed the real values).
 
 variable "ingress_class_name" {
   description = "Ingress controller class for the ekai-saas chart (cicd_provider = \"none\" only) — \"alb\", \"nginx\", \"gce\", \"azure-application-gateway\", etc. Only \"alb\" wires shared_alb_name/certificateArn/subnets below; other controllers need ingress.annotations set separately via a values override."

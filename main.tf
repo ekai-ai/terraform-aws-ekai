@@ -124,7 +124,9 @@ module "platform" {
   oidc_issuer         = module.cluster.oidc_issuer
   oidc_provider_arn   = module.cluster.oidc_provider_arn
   public_subnet_ids   = module.cluster.public_subnet_ids
+  private_subnet_ids  = module.cluster.private_subnet_ids
   vpc_id              = module.cluster.vpc_id
+  vpc_cidr            = module.cluster.vpc_cidr
   eks_cluster_name    = module.cluster.eks_cluster_name
   node_group_asg_name = module.cluster.node_group_asg_name
   ssl_certificate_arn = module.bootstrap.ssl_certificate_arn

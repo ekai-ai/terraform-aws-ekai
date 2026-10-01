@@ -111,6 +111,19 @@ module "ebs_csi_driver" {
   depends_on       = [aws_iam_openid_connect_provider.eks]
 }
 
+# ERD's shared workspace is mounted via EFS, not an EBS-backed PVC -- avoids
+# the single-node-attach limit that deadlocks any rollout where
+# erd/erd-worker/document-worker/profile-worker land on different nodes
+# (confirmed live on the GCP side with the equivalent GCS FUSE fix).
+module "efs_csi_driver" {
+  source           = "../efs_csi_driver"
+  env              = var.env
+  region           = var.region
+  eks_cluster_name = module.eks.eks_cluster_name
+  oidc_issuer_url  = module.eks.oidc_issuer
+  depends_on       = [aws_iam_openid_connect_provider.eks]
+}
+
 # ── RDS (PostgreSQL) + K8s DB-init job ───────────────────────────────────────
 module "rds" {
   source                  = "../rds"

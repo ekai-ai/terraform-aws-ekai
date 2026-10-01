@@ -316,8 +316,17 @@ locals {
     secretName         = var.customer_secret_name
     serviceAccountName = var.shared_service_account_name
     erd = {
+      # Field-level ternaries, not one big object ternary -- Terraform
+      # requires both branches of a conditional to share one type, and an
+      # object with an "efs" attribute vs. one without isn't unifiable.
+      # null is valid for any type, so it works per-field instead.
       workspace = {
-        storageClassName = var.erd_storage_class
+        type             = var.enable_erd_efs ? "efs" : "pvc"
+        storageClassName = var.enable_erd_efs ? null : var.erd_storage_class
+        efs = var.enable_erd_efs ? {
+          fileSystemId  = var.erd_efs_file_system_id
+          accessPointId = var.erd_efs_access_point_id
+        } : null
       }
     }
     ingress = {

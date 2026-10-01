@@ -69,6 +69,7 @@ module "cicd" {
   shared_service_account_name = var.shared_service_account_name
   image_tag                   = var.image_tag
   erd_storage_class           = var.erd_storage_class
+  enable_erd_efs              = var.enable_erd_efs
   ingress_class_name          = var.ingress_class_name
   shared_alb_name             = var.shared_alb_name
   use_minio                   = var.use_minio

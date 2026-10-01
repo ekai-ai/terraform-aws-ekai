@@ -44,6 +44,9 @@ module "cicd" {
   shared_service_account_name = var.shared_service_account_name
   image_tag                   = var.image_tag
   erd_storage_class           = var.erd_storage_class
+  enable_erd_efs              = var.enable_erd_efs
+  erd_efs_file_system_id      = data.terraform_remote_state.combined.outputs.erd_workspace_efs_id
+  erd_efs_access_point_id     = data.terraform_remote_state.combined.outputs.erd_workspace_efs_access_point_id
   ingress_class_name          = var.ingress_class_name
   shared_alb_name             = var.shared_alb_name
   use_minio                   = var.use_minio

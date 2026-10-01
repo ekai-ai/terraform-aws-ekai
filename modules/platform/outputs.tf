@@ -50,3 +50,13 @@ output "argocd_admin_password_plaintext" {
   sensitive   = true
   value       = local.self_service ? random_password.argocd_admin[0].result : null
 }
+
+output "erd_workspace_efs_id" {
+  description = "ERD workspace EFS filesystem ID -- cicd layer needs this to wire the chart's erd.workspace.efs.fileSystemId value."
+  value       = aws_efs_file_system.erd_workspace.id
+}
+
+output "erd_workspace_efs_access_point_id" {
+  description = "ERD workspace EFS access point ID -- cicd layer needs this to wire the chart's erd.workspace.efs.accessPointId value."
+  value       = aws_efs_access_point.erd_workspace.id
+}

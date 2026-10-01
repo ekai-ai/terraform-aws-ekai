@@ -44,9 +44,27 @@ variable "image_tag" {
 }
 
 variable "erd_storage_class" {
-  description = "StorageClass for ERD's workspace PVC (cicd_provider = \"none\" only) — passed through as the ekai-saas chart's erd.workspace.storageClassName."
+  description = "StorageClass for ERD's workspace PVC (cicd_provider = \"none\" only) — passed through as the ekai-saas chart's erd.workspace.storageClassName. Ignored when enable_erd_efs = true."
   type        = string
   default     = "gp3"
+}
+
+variable "enable_erd_efs" {
+  description = "Back ERD's shared workspace with EFS instead of a ReadWriteOnce EBS-backed PVC (cicd_provider = \"none\" only). Avoids Multi-Attach scheduling deadlocks when erd/erd-worker/document-worker/profile-worker land on different nodes. Requires the platform layer's EFS filesystem + access point (created unconditionally there). Defaults to true -- this repo is AWS-only, so there's no cross-cloud reason to keep the older PVC path as the default here."
+  type        = bool
+  default     = true
+}
+
+variable "erd_efs_file_system_id" {
+  description = "ERD workspace EFS filesystem ID (platform layer's erd_workspace_efs_id output). Only used when enable_erd_efs = true."
+  type        = string
+  default     = ""
+}
+
+variable "erd_efs_access_point_id" {
+  description = "ERD workspace EFS access point ID (platform layer's erd_workspace_efs_access_point_id output). Only used when enable_erd_efs = true."
+  type        = string
+  default     = ""
 }
 
 variable "ingress_class_name" {
