@@ -154,6 +154,17 @@ cat > "${POLICY_DIR}/infra.json" <<'POLICY'
         "rds:AddTagsToResource","rds:ListTagsForResource",
         "rds:DescribeDBEngineVersions","rds:DescribeOrderableDBInstanceOptions"
       ], "Resource": "*" },
+    { "Sid": "EFSWorkspace", "Effect": "Allow", "Action": [
+        "elasticfilesystem:CreateFileSystem","elasticfilesystem:DeleteFileSystem",
+        "elasticfilesystem:DescribeFileSystems","elasticfilesystem:DescribeFileSystemPolicy",
+        "elasticfilesystem:UpdateFileSystem",
+        "elasticfilesystem:CreateMountTarget","elasticfilesystem:DeleteMountTarget",
+        "elasticfilesystem:DescribeMountTargets","elasticfilesystem:DescribeMountTargetSecurityGroups",
+        "elasticfilesystem:CreateAccessPoint","elasticfilesystem:DeleteAccessPoint",
+        "elasticfilesystem:DescribeAccessPoints",
+        "elasticfilesystem:TagResource","elasticfilesystem:UntagResource",
+        "elasticfilesystem:ListTagsForResource"
+      ], "Resource": "*" },
     { "Sid": "IAMForCluster", "Effect": "Allow", "Action": [
         "iam:CreateRole","iam:DeleteRole","iam:GetRole","iam:UpdateRole","iam:ListRoles",
         "iam:CreatePolicy","iam:DeletePolicy","iam:GetPolicy",
