@@ -157,6 +157,7 @@ cat > "${POLICY_DIR}/infra.json" <<'POLICY'
     { "Sid": "EFSWorkspace", "Effect": "Allow", "Action": [
         "elasticfilesystem:CreateFileSystem","elasticfilesystem:DeleteFileSystem",
         "elasticfilesystem:DescribeFileSystems","elasticfilesystem:DescribeFileSystemPolicy",
+        "elasticfilesystem:DescribeLifecycleConfiguration","elasticfilesystem:PutLifecycleConfiguration",
         "elasticfilesystem:UpdateFileSystem",
         "elasticfilesystem:CreateMountTarget","elasticfilesystem:DeleteMountTarget",
         "elasticfilesystem:DescribeMountTargets","elasticfilesystem:DescribeMountTargetSecurityGroups",
