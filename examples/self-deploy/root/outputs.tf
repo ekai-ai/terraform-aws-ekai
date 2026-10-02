@@ -135,3 +135,13 @@ output "cluster_secret_store_name" {
   description = "ClusterSecretStore name. Read by the cicd module's ExternalSecret resources."
   value       = module.infra.cluster_secret_store_name
 }
+
+output "erd_workspace_efs_id" {
+  description = "ERD workspace EFS filesystem ID (enable_erd_efs only). Read by the cicd module to build the ekai-saas chart's erd.workspace.efs values."
+  value       = module.infra.erd_workspace_efs_id
+}
+
+output "erd_workspace_efs_access_point_id" {
+  description = "ERD workspace EFS access point ID (enable_erd_efs only). Read by the cicd module to build the ekai-saas chart's erd.workspace.efs values."
+  value       = module.infra.erd_workspace_efs_access_point_id
+}
