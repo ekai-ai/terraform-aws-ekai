@@ -119,6 +119,7 @@ cat > "${POLICY_DIR}/infra.json" <<'POLICY'
         "ec2:ModifyVpcAttribute","ec2:ReleaseAddress",
         "ec2:RevokeSecurityGroupEgress","ec2:RevokeSecurityGroupIngress",
         "ec2:CreateNetworkInterface","ec2:DeleteNetworkInterface",
+        "ec2:DescribeNetworkInterfaceAttribute",
         "ec2:DescribeInstanceTypes","ec2:DescribeDhcpOptions",
         "ec2:DescribeAddressesAttribute",
         "ec2:DescribeVpcEndpoints","ec2:DeleteVpcEndpoints",
