@@ -32,9 +32,32 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+# --skip-dns-wait: for non-interactive callers (e.g. ekai-deployer/install.sh).
+# Unlike GCP's own --skip-dns-wait, this does NOT proceed to the full apply
+# afterward -- AWS's aws_acm_certificate_validation blocks that same apply
+# synchronously until DNS validation succeeds (GCP's cert-manager reconciles
+# its Certificate resource asynchronously instead, so skipping GCP's wait is
+# safe to fall through from; skipping AWS's wait and falling through would
+# just hang on that resource same as before this flag existed). Instead:
+# create the zone, print its nameservers, and exit -- re-running this same
+# command once delegation has propagated picks up from there (the zone
+# already exists, so that step is a fast no-op) and proceeds through the
+# full apply normally.
+SKIP_DNS_WAIT=0
+args=()
+for arg in "$@"; do
+  case "$arg" in
+    --skip-dns-wait) SKIP_DNS_WAIT=1 ;;
+    *) args+=("$arg") ;;
+  esac
+done
+set -- "${args[@]}"
+
 if [[ $# -lt 1 ]]; then
-  echo "Usage: $0 <ENV>"
-  echo "  ENV  must have a matching env/<ENV>.tfvars (e.g. dev, qa, staging, test, client1)"
+  echo "Usage: $0 [--skip-dns-wait] <ENV>"
+  echo "  ENV              must have a matching env/<ENV>.tfvars (e.g. dev, qa, staging, test, client1)"
+  echo "  --skip-dns-wait  create the Route53 zone and print its nameservers, then exit instead of"
+  echo "                   waiting for delegation -- re-run the same command once it's done"
   exit 1
 fi
 ENV="$1"
@@ -509,6 +532,14 @@ if [[ "${MANAGE_DNS_ZONE}" == "true" ]]; then
     echo "parent DNS zone) pointing at each of these nameservers:"
     echo "${ZONE_NS}" | sed 's/^/  /'
     echo
+    if [[ "${SKIP_DNS_WAIT}" -eq 1 ]]; then
+      echo "==> DNS wait skipped -- not continuing to the full apply."
+      echo "    Once that delegation is in place, re-run the exact same command:"
+      echo "      $0 ${ENV}"
+      echo "    (the Route53 zone above already exists, so that step will be a"
+      echo "    fast no-op this time -- it'll go straight into the full apply.)"
+      exit 0
+    fi
     read -rp "Press Enter once you've added it " _
     echo "==> Checking DNS delegation (this can take several minutes to propagate)..."
     # Strip trailing dots on both sides before comparing -- Route53's own API
