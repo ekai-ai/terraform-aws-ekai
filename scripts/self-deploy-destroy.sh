@@ -144,6 +144,30 @@ vpc_cleanup() {
   "${SCRIPT_DIR}/cleanup-vpc.sh" "${VPC_ID}" "${REGION}"
 }
 
+# aws-load-balancer-controller and external-secrets both register admission
+# webhooks with failurePolicy: Fail (hardcoded for most of them -- not
+# something their Helm charts expose as configurable). If either controller
+# is destroyed before every resource depending on its webhook (an Ingress,
+# a TargetGroupBinding, a ClusterSecretStore) is gone -- which the
+# time_sleep.wait_for_alb_cleanup ordering in modules/platform guards against
+# on a clean single run, but a prior failed/retried destroy attempt can still
+# leave this way -- that resource's own delete call hangs forever on a dead
+# webhook endpoint. During destroy nothing needs admission control enforced
+# anyway, so clear these up front; cheap and idempotent, same as vpc_cleanup.
+cleanup_stale_webhooks() {
+  echo "==> Clearing ALB controller / external-secrets webhook configs (prevents stuck deletes if their controller is already gone)..."
+  local cluster_name
+  cluster_name=$(cd "${REPO_ROOT}/examples/self-deploy/root" && terraform output -raw eks_cluster_name 2>/dev/null || echo "")
+  if [[ -z "${cluster_name}" || "${cluster_name}" == "null" ]]; then
+    echo "    No EKS cluster name found — skipping."
+    return
+  fi
+  aws eks update-kubeconfig --name "${cluster_name}" --region "${REGION}" >/dev/null 2>&1 || { echo "    Could not reach the cluster — skipping."; return; }
+  kubectl delete mutatingwebhookconfigurations aws-load-balancer-webhook --ignore-not-found 2>/dev/null || true
+  kubectl delete validatingwebhookconfigurations aws-load-balancer-webhook --ignore-not-found 2>/dev/null || true
+  kubectl delete validatingwebhookconfigurations secretstore-validate --ignore-not-found 2>/dev/null || true
+}
+
 # ── 1. Terraform destroy — cicd/ first ────────────────────────────────────────
 # Must run while the root config's cluster/ArgoCD are still live — cicd's
 # kubernetes/kubectl/argocd providers (configured from a remote_state read
@@ -179,9 +203,11 @@ echo "════════ terraform destroy (bootstrap + cluster + platform
 cd "${REPO_ROOT}/examples/self-deploy/root"
 terraform init -upgrade -reconfigure -backend-config="../../../env/backend-${ENV}.tfbackend" 1>/dev/null
 vpc_cleanup
+cleanup_stale_webhooks
 if ! terraform destroy -auto-approve -compact-warnings -var-file="../../../env/${ENV}.tfvars"; then
   echo "First destroy attempt failed — re-running VPC cleanup and retrying once..."
   vpc_cleanup
+  cleanup_stale_webhooks
   echo "==> Waiting 5 minutes for EKS control-plane ENIs / ALBs to fully release before retrying..."
   sleep 300
   terraform refresh -compact-warnings -var-file="../../../env/${ENV}.tfvars" 2>/dev/null || true
