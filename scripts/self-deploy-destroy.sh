@@ -156,12 +156,16 @@ vpc_cleanup() {
 # anyway, so clear these up front; cheap and idempotent, same as vpc_cleanup.
 cleanup_stale_webhooks() {
   echo "==> Clearing ALB controller / external-secrets webhook configs (prevents stuck deletes if their controller is already gone)..."
-  local cluster_name
-  cluster_name=$(cd "${REPO_ROOT}/examples/self-deploy/root" && terraform output -raw eks_cluster_name 2>/dev/null || echo "")
-  if [[ -z "${cluster_name}" || "${cluster_name}" == "null" ]]; then
-    echo "    No EKS cluster name found — skipping."
-    return
-  fi
+  # Built from the same name + "-saas-<env>" convention modules/cluster uses
+  # (main.tf: eks_cluster_full_name = "${var.eks_cluster_name}-saas-${var.env}"),
+  # not read back via `terraform output` -- that output can already be gone
+  # from state mid-destroy (parallel branches finish destroying independently)
+  # while the real EKS API server is still up long enough for this exact
+  # webhook race to happen, which is exactly the case this function exists for.
+  local cluster_name_prefix
+  cluster_name_prefix=$(grep -E '^eks_cluster_name[[:space:]]*=' "${TFVARS}" | head -1 | sed 's/.*=[[:space:]]*"\(.*\)".*/\1/')
+  cluster_name_prefix="${cluster_name_prefix:-ekai-eks}"
+  local cluster_name="${cluster_name_prefix}-saas-${ENV}"
   aws eks update-kubeconfig --name "${cluster_name}" --region "${REGION}" >/dev/null 2>&1 || { echo "    Could not reach the cluster — skipping."; return; }
   kubectl delete mutatingwebhookconfigurations aws-load-balancer-webhook --ignore-not-found 2>/dev/null || true
   kubectl delete validatingwebhookconfigurations aws-load-balancer-webhook --ignore-not-found 2>/dev/null || true
