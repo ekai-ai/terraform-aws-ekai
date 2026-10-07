@@ -56,9 +56,14 @@ for bin in aws terraform jq; do
   command -v "$bin" >/dev/null 2>&1 || { echo "ERROR: '$bin' is required but not installed."; exit 1; }
 done
 
-REGION=$(grep -E '^region\s*=' "${TFVARS}" | head -1 | sed 's/.*=\s*"\(.*\)".*/\1/')
+# || true on both: pipefail fails the whole pipeline on a no-match grep even
+# though head/sed after it succeed, which would otherwise kill this script
+# under set -e before the checks on the next lines ever run -- cicd_provider
+# in particular is routinely absent (self-service tfvars leave it unset,
+# defaulting to "none" below).
+REGION=$(grep -E '^region\s*=' "${TFVARS}" | head -1 | sed 's/.*=\s*"\(.*\)".*/\1/' || true)
 [[ -z "${REGION}" ]] && { echo "ERROR: could not read 'region' from ${TFVARS}"; exit 1; }
-CICD_PROVIDER=$(grep -E '^cicd_provider\s*=' "${TFVARS}" | head -1 | sed 's/.*=\s*"\(.*\)".*/\1/')
+CICD_PROVIDER=$(grep -E '^cicd_provider\s*=' "${TFVARS}" | head -1 | sed 's/.*=\s*"\(.*\)".*/\1/' || true)
 [[ -z "${CICD_PROVIDER}" ]] && CICD_PROVIDER="none"
 
 echo "════════════════════════════════════════════════════════════════"
@@ -163,7 +168,12 @@ cleanup_stale_webhooks() {
   # while the real EKS API server is still up long enough for this exact
   # webhook race to happen, which is exactly the case this function exists for.
   local cluster_name_prefix
-  cluster_name_prefix=$(grep -E '^eks_cluster_name[[:space:]]*=' "${TFVARS}" | head -1 | sed 's/.*=[[:space:]]*"\(.*\)".*/\1/')
+  # || true: pipefail means a no-match grep (the common case -- eks_cluster_name
+  # is usually left commented out, defaulting elsewhere) fails the whole
+  # pipeline even though head/sed after it succeed, which kills this entire
+  # script right here under set -e with zero output. Same bug class fixed
+  # throughout ekai-deployer/install.sh -- missed it in this new function.
+  cluster_name_prefix=$(grep -E '^eks_cluster_name[[:space:]]*=' "${TFVARS}" | head -1 | sed 's/.*=[[:space:]]*"\(.*\)".*/\1/' || true)
   cluster_name_prefix="${cluster_name_prefix:-ekai-eks}"
   local cluster_name="${cluster_name_prefix}-saas-${ENV}"
   aws eks update-kubeconfig --name "${cluster_name}" --region "${REGION}" >/dev/null 2>&1 || { echo "    Could not reach the cluster — skipping."; return; }
