@@ -177,9 +177,17 @@ cleanup_stale_webhooks() {
   cluster_name_prefix="${cluster_name_prefix:-ekai-eks}"
   local cluster_name="${cluster_name_prefix}-saas-${ENV}"
   aws eks update-kubeconfig --name "${cluster_name}" --region "${REGION}" >/dev/null 2>&1 || { echo "    Could not reach the cluster — skipping."; return; }
-  kubectl delete mutatingwebhookconfigurations aws-load-balancer-webhook --ignore-not-found 2>/dev/null || true
-  kubectl delete validatingwebhookconfigurations aws-load-balancer-webhook --ignore-not-found 2>/dev/null || true
-  kubectl delete validatingwebhookconfigurations secretstore-validate --ignore-not-found 2>/dev/null || true
+  # By label (app.kubernetes.io/instance=<helm release name>), not by naming
+  # each webhook object individually -- both charts register more than one
+  # (external-secrets ships secretstore-validate AND a separate
+  # externalsecret-validate; naming one by one meant missing the other, found
+  # live when a destroy got stuck on it right after the first one was fixed).
+  # This catches every webhook either release has now or adds in a future
+  # chart version, under one release-scoped label instead of a name list.
+  for release in aws-load-balancer-controller external-secrets; do
+    kubectl delete validatingwebhookconfigurations,mutatingwebhookconfigurations \
+      -l "app.kubernetes.io/instance=${release}" --ignore-not-found || true
+  done
 }
 
 # ── 1. Terraform destroy — cicd/ first ────────────────────────────────────────
