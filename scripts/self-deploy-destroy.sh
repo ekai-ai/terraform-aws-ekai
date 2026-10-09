@@ -190,6 +190,58 @@ cleanup_stale_webhooks() {
   done
 }
 
+# The AWS Load Balancer Controller sometimes finishes deleting the real ALB
+# and target group but never gets to remove the ingress.k8s.aws/resources /
+# elbv2.k8s.aws/resources finalizers from the Ingress/TargetGroupBinding
+# objects afterward (seen live: node<->control-plane connectivity degrades
+# partway through destroy while other modules tear down in parallel, so the
+# controller's own follow-up PATCH never lands). That leaves the namespace
+# stuck in Terminating forever even though nothing is actually leaked in AWS.
+# Only clear a finalizer after confirming via the AWS API that the real
+# resource is gone -- never strip it blindly, or a still-live ALB/target
+# group would leak.
+cleanup_stuck_alb_finalizers() {
+  echo "==> Checking for Ingress/TargetGroupBinding objects stuck on an AWS Load Balancer Controller finalizer..."
+  local ingresses
+  ingresses=$(kubectl get ingress -A -o json 2>/dev/null | jq -r '
+    .items[] | select(.metadata.finalizers // [] | index("ingress.k8s.aws/resources"))
+    | "\(.metadata.namespace)|\(.metadata.name)|\(.metadata.annotations["alb.ingress.kubernetes.io/load-balancer-name"] // "")"
+  ' || true)
+  if [[ -n "${ingresses}" ]]; then
+    while IFS='|' read -r ns name lb_name; do
+      [[ -z "${ns}" ]] && continue
+      if [[ -z "${lb_name}" ]]; then
+        echo "    ${ns}/${name}: no load-balancer-name annotation -- can't verify safely, leaving it."
+        continue
+      fi
+      local lb_count
+      lb_count=$(aws elbv2 describe-load-balancers --region "${REGION}" --query "length(LoadBalancers[?LoadBalancerName=='${lb_name}'])" --output text 2>/dev/null || echo "1")
+      if [[ "${lb_count}" != "0" ]]; then
+        echo "    ${ns}/${name}: ALB '${lb_name}' still exists (or couldn't confirm) -- leaving finalizer alone."
+        continue
+      fi
+      echo "    ${ns}/${name}: ALB '${lb_name}' confirmed gone -- clearing stuck finalizer."
+      kubectl patch ingress "${name}" -n "${ns}" --type=merge -p '{"metadata":{"finalizers":[]}}' || true
+    done <<< "${ingresses}"
+  fi
+
+  local tgbs
+  tgbs=$(kubectl get targetgroupbindings.elbv2.k8s.aws -A -o json 2>/dev/null | jq -r '
+    .items[] | select(.metadata.finalizers // [] | index("elbv2.k8s.aws/resources"))
+    | "\(.metadata.namespace)|\(.metadata.name)|\(.spec.targetGroupARN // "")"
+  ' || true)
+  [[ -z "${tgbs}" ]] && return
+  while IFS='|' read -r ns name tg_arn; do
+    [[ -z "${ns}" ]] && continue
+    if [[ -n "${tg_arn}" ]] && aws elbv2 describe-target-groups --region "${REGION}" --target-group-arns "${tg_arn}" >/dev/null 2>&1; then
+      echo "    ${ns}/${name}: target group still exists -- leaving finalizer alone."
+      continue
+    fi
+    echo "    ${ns}/${name}: target group confirmed gone -- clearing stuck finalizer."
+    kubectl patch targetgroupbindings.elbv2.k8s.aws "${name}" -n "${ns}" --type=merge -p '{"metadata":{"finalizers":[]}}' || true
+  done <<< "${tgbs}"
+}
+
 # ── 1. Terraform destroy — cicd/ first ────────────────────────────────────────
 # Must run while the root config's cluster/ArgoCD are still live — cicd's
 # kubernetes/kubectl/argocd providers (configured from a remote_state read
@@ -214,22 +266,36 @@ echo "✓ cicd destroyed for env=${ENV}."
 # VPC teardown is still the fragile part: the ALB controller, the EKS VPC CNI
 # plugin, and GuardDuty's EKS Runtime Monitoring all create ENIs/security
 # groups/VPC endpoints directly against the AWS API that Terraform never
-# tracks (no resource in state for them) -- terraform destroy can hang for a
-# very long time on a subnet's DependencyViolation before it ever reports
-# failure, since it keeps retrying internally rather than giving up quickly.
-# Run vpc_cleanup proactively BEFORE the first attempt (cheap and idempotent
-# -- everything it deletes only exists if a controller actually created it)
-# instead of waiting for that slow failure to trigger it reactively.
+# tracks (no resource in state for them) -- a subnet's DependencyViolation
+# after platform is gone means something that same destroy pass should have
+# already deregistered (an ALB, an orphaned SG) didn't quite finish.
+#
+# cleanup-vpc.sh force-deletes ALBs and EVERY non-default security group in
+# the VPC via the raw AWS API -- that's only safe once platform (ArgoCD, the
+# ALB controller itself) is already destroyed and the cluster's nodes are
+# gone too. Running it before the first attempt (as this used to) deletes
+# security groups while the cluster is still fully up and running, which is
+# the likely explanation for a live control-plane<->kubelet timeout seen
+# during a stuck destroy (port 10250) right alongside the ArgoCD Ingress /
+# TargetGroupBinding finalizers never clearing -- the ALB controller trying
+# to manage resources cleanup-vpc.sh may have already ripped out from under
+# it. Not confirmed via CloudTrail, but regardless of whether that's the
+# exact mechanism, force-deleting live infrastructure's security groups
+# before the controllers that depend on them are gone is unsafe on its own
+# terms. Let the first attempt run with everything still live and able to
+# clean up after itself properly; only fall back to the blunt AWS-API
+# cleanup on retry, once platform is confirmed gone, matching cleanup-vpc.sh's
+# own documented precondition ("Run after platform-layer destroy").
 echo
 echo "════════ terraform destroy (bootstrap + cluster + platform) ════════"
 cd "${REPO_ROOT}/examples/self-deploy/root"
 terraform init -upgrade -reconfigure -backend-config="../../../env/backend-${ENV}.tfbackend" 1>/dev/null
-vpc_cleanup
 cleanup_stale_webhooks
 if ! terraform destroy -auto-approve -compact-warnings -var-file="../../../env/${ENV}.tfvars"; then
   echo "First destroy attempt failed — re-running VPC cleanup and retrying once..."
   vpc_cleanup
   cleanup_stale_webhooks
+  cleanup_stuck_alb_finalizers
   echo "==> Waiting 5 minutes for EKS control-plane ENIs / ALBs to fully release before retrying..."
   sleep 300
   terraform refresh -compact-warnings -var-file="../../../env/${ENV}.tfvars" 2>/dev/null || true
