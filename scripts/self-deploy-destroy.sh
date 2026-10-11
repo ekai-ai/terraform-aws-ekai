@@ -304,9 +304,15 @@ if ! terraform destroy -auto-approve -compact-warnings -var-file="../../../env/$
   echo "First destroy attempt failed — re-running VPC cleanup and retrying once..."
   vpc_cleanup
   cleanup_stale_webhooks
-  cleanup_stuck_alb_finalizers
   echo "==> Waiting 5 minutes for EKS control-plane ENIs / ALBs to fully release before retrying..."
   sleep 300
+  # Only after the wait, not before -- the ALB is very likely still mid-
+  # deregistration-delay teardown right when the first attempt just failed,
+  # so checking here first (as this used to) always found it "still exists"
+  # and correctly left the finalizer alone, then never checked again. Found
+  # live: a destroy that retried, found the same stuck finalizer, and had
+  # nothing left to clear it since this ran too early.
+  cleanup_stuck_alb_finalizers
   terraform refresh -compact-warnings -var-file="../../../env/${ENV}.tfvars" 2>/dev/null || true
   terraform destroy -auto-approve -compact-warnings -var-file="../../../env/${ENV}.tfvars"
 fi
