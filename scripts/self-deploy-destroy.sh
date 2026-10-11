@@ -251,6 +251,28 @@ cleanup_stuck_alb_finalizers() {
   done <<< "${tgbs}"
 }
 
+# The ALB and its target group don't finish deleting at the same moment --
+# confirmed live: the ALB was already gone (Ingress finalizer cleared fine)
+# while the TargetGroupBinding's own target group was still around a few
+# minutes later, so a single cleanup_stuck_alb_finalizers pass cleared one
+# and correctly left the other, with nothing left to re-check it. Poll
+# instead of checking once.
+wait_for_alb_finalizers_clear() {
+  for i in $(seq 1 6); do
+    cleanup_stuck_alb_finalizers
+    local remaining
+    remaining=$(
+      {
+        kubectl get ingress -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.finalizers // [] | index("ingress.k8s.aws/resources")) | .metadata.name'
+        kubectl get targetgroupbindings.elbv2.k8s.aws -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.finalizers // [] | index("elbv2.k8s.aws/resources")) | .metadata.name'
+      } | wc -l
+    )
+    [[ "${remaining}" -eq 0 ]] && return
+    echo "    ${remaining} object(s) still finalizer-blocked -- waiting 30s (attempt ${i}/6)..."
+    sleep 30
+  done
+}
+
 # ── 1. Terraform destroy — cicd/ first ────────────────────────────────────────
 # Must run while the root config's cluster/ArgoCD are still live — cicd's
 # kubernetes/kubectl/argocd providers (configured from a remote_state read
@@ -312,7 +334,7 @@ if ! terraform destroy -auto-approve -compact-warnings -var-file="../../../env/$
   # and correctly left the finalizer alone, then never checked again. Found
   # live: a destroy that retried, found the same stuck finalizer, and had
   # nothing left to clear it since this ran too early.
-  cleanup_stuck_alb_finalizers
+  wait_for_alb_finalizers_clear
   terraform refresh -compact-warnings -var-file="../../../env/${ENV}.tfvars" 2>/dev/null || true
   terraform destroy -auto-approve -compact-warnings -var-file="../../../env/${ENV}.tfvars"
 fi
