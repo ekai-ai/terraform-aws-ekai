@@ -177,17 +177,26 @@ cleanup_stale_webhooks() {
   cluster_name_prefix="${cluster_name_prefix:-ekai-eks}"
   local cluster_name="${cluster_name_prefix}-saas-${ENV}"
   aws eks update-kubeconfig --name "${cluster_name}" --region "${REGION}" >/dev/null 2>&1 || { echo "    Could not reach the cluster — skipping."; return; }
-  # By label (app.kubernetes.io/instance=<helm release name>), not by naming
-  # each webhook object individually -- both charts register more than one
-  # (external-secrets ships secretstore-validate AND a separate
-  # externalsecret-validate; naming one by one meant missing the other, found
-  # live when a destroy got stuck on it right after the first one was fixed).
-  # This catches every webhook either release has now or adds in a future
-  # chart version, under one release-scoped label instead of a name list.
-  for release in aws-load-balancer-controller external-secrets; do
-    kubectl delete validatingwebhookconfigurations,mutatingwebhookconfigurations \
-      -l "app.kubernetes.io/instance=${release}" --ignore-not-found || true
-  done
+  # By label, not by naming each webhook object individually -- both charts
+  # register more than one (external-secrets ships secretstore-validate AND a
+  # separate externalsecret-validate; naming one by one meant missing the
+  # other, found live when a destroy got stuck on it right after the first
+  # one was fixed). This catches every webhook either release has now or
+  # adds in a future chart version, under one release-scoped label instead
+  # of a name list.
+  kubectl delete validatingwebhookconfigurations,mutatingwebhookconfigurations \
+    -l "app.kubernetes.io/instance=aws-load-balancer-controller" --ignore-not-found || true
+  # external-secrets' chart does NOT label its webhooks with
+  # app.kubernetes.io/instance at all (confirmed live on a real cluster:
+  # secretstore-validate and externalsecret-validate only carry
+  # app.kubernetes.io/managed-by=Helm and external-secrets.io/component=webhook)
+  # -- the instance-label selector above never matched them, so they silently
+  # survived every run. Once the chart's own webhook Service was gone (e.g.
+  # helm_release.eso destroyed in an earlier partial/retried destroy), any
+  # later attempt to delete the ClusterSecretStore failed outright: "failed
+  # calling webhook ... service external-secrets-webhook not found".
+  kubectl delete validatingwebhookconfigurations,mutatingwebhookconfigurations \
+    -l "external-secrets.io/component=webhook" --ignore-not-found || true
 }
 
 # The AWS Load Balancer Controller sometimes finishes deleting the real ALB

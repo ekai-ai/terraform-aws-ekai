@@ -2,6 +2,13 @@ resource "kubernetes_namespace" "argocd" {
   metadata {
     name = var.argocd_namespace
   }
+
+  # Default delete timeout wasn't enough margin for the Ingress's ALB target
+  # group to actually finish deregistering (see kubectl_manifest.argocd_ingress
+  # below) before this gives up -- give it real headroom instead of racing it.
+  timeouts {
+    delete = "10m"
+  }
 }
 
 resource "helm_release" "argocd" {
@@ -121,6 +128,13 @@ resource "kubectl_manifest" "argocd_ingress" {
         "alb.ingress.kubernetes.io/healthcheck-path"   = "/healthz"
         "alb.ingress.kubernetes.io/healthcheck-port"   = "traffic-port"
         "alb.ingress.kubernetes.io/success-codes"      = "200"
+        # AWS's default target group deregistration delay is 300s -- the ALB
+        # controller has to wait that out before it can finish deleting the
+        # target group/ALB and clear this Ingress's finalizer, which was
+        # racing (and losing to) the namespace delete's own timeout on
+        # destroy. ArgoCD's UI doesn't need a long connection drain, so cut
+        # it down instead of just giving destroy more time to wait on it.
+        "alb.ingress.kubernetes.io/target-group-attributes" = "deregistration_delay.timeout_seconds=30"
       }
     }
     spec = {

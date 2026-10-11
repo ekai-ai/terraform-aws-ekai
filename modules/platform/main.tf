@@ -65,6 +65,21 @@ module "alb_controller" {
 # Scales the node group's ASG within the min/max already set in 02-cluster's
 # scaling_config (node_min_size/mode_max_size) — no cluster-level change
 # needed to raise the ceiling, just edit mode_max_size in tfvars.
+#
+# depends_on every other platform workload below (not just time_sleep like
+# they depend on each other) so destroy reverses that into cluster-autoscaler
+# being torn down FIRST, before any of them. Without this, cluster-autoscaler
+# stays live and reactive for the whole platform teardown -- confirmed live:
+# with all nodes healthy (Ready), a destroy still got a pod stuck Terminating
+# in the eso namespace because autoscaler scaled a node down mid-destroy as
+# utilization dropped (skip-nodes-with-system-pods = "false" plus the default
+# ~10m scale-down-unneeded-time comfortably fits inside how long this destroy
+# already takes). Apply-side tradeoff: autoscaler now comes up only after
+# these modules' own pods are already scheduled, so it can't help their
+# *initial* scheduling if the base node group were ever too small for them --
+# acceptable since node_min_size is already sized for base platform capacity
+# and autoscaler's real job is scaling for the app workload cicd deploys
+# afterward, not these.
 module "cluster_autoscaler" {
   source                           = "../cluster_autoscaler"
   cluster_name                     = local.eks_cluster_name
@@ -73,6 +88,8 @@ module "cluster_autoscaler" {
   aws_region                       = var.region
   node_group_asg_name              = var.node_group_asg_name
   helm_chart_version               = var.cluster_autoscaler_chart_version
+
+  depends_on = [module.argoCD, module.eso, module.redis, module.neo4j, helm_release.reloader, kubernetes_namespace.keda]
 }
 
 # On destroy: argoCD + keda depend on this time_sleep, so they are destroyed

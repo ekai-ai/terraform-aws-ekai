@@ -163,7 +163,14 @@ resource "kubectl_manifest" "image_updater" {
 # exist by the time argocd_application syncs into it.
 #
 # On destroy: ArgoCD prunes all K8s resources including Ingresses.
-# ALB controller then deletes the ALBs — typically 2-4 min.
+# ALB controller then deletes the ALBs — typically 2-4 min, but if the app's
+# own Ingress (deployment-files' ekai-saas chart, outside this repo) leaves
+# its target group on AWS's default 300s deregistration delay, the controller
+# can't actually finish until that alone elapses, same race confirmed live
+# against modules/argoCD's own Ingress (see its destroy_duration/timeouts
+# comments). Not confirmed here specifically -- worth checking that chart's
+# own Ingress for the same annotation -- but padding the buffer past the
+# default delay either way costs nothing on a destroy that already waits.
 # This sleep sits between argocd_application (destroyed first) and the
 # caller's namespace (destroyed after -- the caller depends on this whole
 # module), giving ALB controller time to finish before 03-platform/02-cluster
@@ -171,7 +178,7 @@ resource "kubectl_manifest" "image_updater" {
 # On create: 0s, no impact.
 resource "time_sleep" "wait_for_argocd_prune" {
   create_duration  = "0s"
-  destroy_duration = "5m"
+  destroy_duration = "6m"
 }
 
 # Route53 records moved to 04-cicd/main.tf root using data.aws_lb (AWS provider).
