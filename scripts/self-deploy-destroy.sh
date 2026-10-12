@@ -242,11 +242,25 @@ cleanup_stuck_alb_finalizers() {
   [[ -z "${tgbs}" ]] && return
   while IFS='|' read -r ns name tg_arn; do
     [[ -z "${ns}" ]] && continue
-    if [[ -n "${tg_arn}" ]] && aws elbv2 describe-target-groups --region "${REGION}" --target-group-arns "${tg_arn}" >/dev/null 2>&1; then
-      echo "    ${ns}/${name}: target group still exists -- leaving finalizer alone."
-      continue
+    if [[ -n "${tg_arn}" ]]; then
+      local lb_count
+      lb_count=$(aws elbv2 describe-target-groups --region "${REGION}" --target-group-arns "${tg_arn}" --query "length(TargetGroups[0].LoadBalancerArns)" --output text 2>/dev/null || echo "")
+      if [[ -n "${lb_count}" ]]; then
+        if [[ "${lb_count}" != "0" ]]; then
+          echo "    ${ns}/${name}: target group still attached to a load balancer -- leaving finalizer alone."
+          continue
+        fi
+        # Exists but LoadBalancerArns is empty -- already detached from any
+        # ALB, so nothing is actually routing through it; the controller
+        # just isn't getting around to deleting the orphaned target group
+        # itself (confirmed live: found 3 of these, from 3 different,
+        # already-gone envs, left behind indefinitely). Safe to delete
+        # directly instead of leaving it to accumulate forever.
+        echo "    ${ns}/${name}: target group orphaned (no load balancer attached) -- deleting it and clearing the finalizer."
+        aws elbv2 delete-target-group --region "${REGION}" --target-group-arn "${tg_arn}" 2>/dev/null || true
+      fi
     fi
-    echo "    ${ns}/${name}: target group confirmed gone -- clearing stuck finalizer."
+    echo "    ${ns}/${name}: clearing finalizer."
     kubectl patch targetgroupbindings.elbv2.k8s.aws "${name}" -n "${ns}" --type=merge -p '{"metadata":{"finalizers":[]}}' || true
   done <<< "${tgbs}"
 }
