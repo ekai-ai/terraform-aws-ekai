@@ -93,7 +93,6 @@ resource "kubernetes_config_map_v1_data" "aws_auth" {
 # ── CloudWatch Observability addon ────────────────────────────────────────────
 module "amazon_cloudwatch_addon" {
   source               = "../amazon_cloudwatch_addon"
-  region               = var.region
   eks_cluster_name     = module.eks.eks_cluster_name
   cloudwatch_namespace = var.cloudwatch_namespace
   depends_on           = [module.node_group]

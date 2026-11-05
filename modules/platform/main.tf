@@ -46,13 +46,12 @@ resource "terraform_data" "argocd_admin_password_hashed" {
 }
 
 # ── ALB Controller (IRSA + Helm) ──────────────────────────────────────────────
-# OIDC provider was created in 02-cluster; alb_controller/iam.tf derives the ARN
-# from the issuer URL, so we pass the issuer URL in both fields.
+# OIDC provider was created in 02-cluster; alb_controller/iam.tf derives the
+# role's trust policy ARN from this issuer URL.
 #
 module "alb_controller" {
   source                           = "../alb_controller"
   cluster_name                     = local.eks_cluster_name
-  cluster_identity_oidc_issuer     = local.oidc_issuer
   cluster_identity_oidc_issuer_arn = local.oidc_issuer
   aws_region                       = var.region
   helm_chart_version               = var.alb_controller_chart_version
@@ -83,7 +82,6 @@ module "alb_controller" {
 module "cluster_autoscaler" {
   source                           = "../cluster_autoscaler"
   cluster_name                     = local.eks_cluster_name
-  cluster_identity_oidc_issuer     = local.oidc_issuer
   cluster_identity_oidc_issuer_arn = local.oidc_issuer
   aws_region                       = var.region
   node_group_asg_name              = var.node_group_asg_name

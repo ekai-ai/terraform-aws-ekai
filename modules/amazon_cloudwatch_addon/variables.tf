@@ -3,11 +3,6 @@ variable "eks_cluster_name" {
   type        = string
 }
 
-variable "region" {
-  description = "AWS region"
-  type        = string
-}
-
 variable "cloudwatch_namespace" {
   description = "Kubernetes namespace for the CloudWatch agent"
   type        = string

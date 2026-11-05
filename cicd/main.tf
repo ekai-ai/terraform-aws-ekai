@@ -81,9 +81,6 @@ module "cicd" {
   backend_db_name     = data.terraform_remote_state.combined.outputs.backend_db_name
   rds_endpoint        = data.terraform_remote_state.combined.outputs.rds_endpoint
   public_subnet_ids   = data.terraform_remote_state.combined.outputs.public_subnet_ids
-  vpc_id              = data.terraform_remote_state.combined.outputs.vpc_id
-  private_subnet_ids  = data.terraform_remote_state.combined.outputs.private_subnet_ids
-  rds_sg_id           = data.terraform_remote_state.combined.outputs.rds_sg_id
   oidc_issuer         = data.terraform_remote_state.combined.outputs.oidc_issuer
 
   # formerly `data "terraform_remote_state" "platform"` in the original

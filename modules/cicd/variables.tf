@@ -252,21 +252,6 @@ variable "public_subnet_ids" {
   type        = list(string)
 }
 
-variable "vpc_id" {
-  description = "VPC ID (sourced from the cluster submodule's output)"
-  type        = string
-}
-
-variable "private_subnet_ids" {
-  description = "Private subnet IDs (sourced from the cluster submodule's output)"
-  type        = list(string)
-}
-
-variable "rds_sg_id" {
-  description = "RDS security group ID (sourced from the cluster submodule's output)"
-  type        = string
-}
-
 variable "oidc_issuer" {
   description = "OIDC issuer URL of the EKS cluster (sourced from the cluster submodule's output)"
   type        = string

@@ -14,11 +14,6 @@ variable "aws_region" {
   type        = string
 }
 
-variable "cluster_identity_oidc_issuer" {
-  description = "OIDC issuer URL of the EKS cluster"
-  type        = string
-}
-
 variable "cluster_identity_oidc_issuer_arn" {
   description = "OIDC issuer URL used to construct the IAM OIDC provider ARN"
   type        = string

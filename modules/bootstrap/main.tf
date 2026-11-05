@@ -95,7 +95,6 @@ resource "aws_acm_certificate_validation" "main" {
 # subnets and IGW delete cleanly without DependencyViolation.
 module "vpc" {
   source               = "../vpc"
-  region               = var.region
   env                  = var.env
   vpc_cidr             = var.vpc_cidr
   public_subnet_cidrs  = var.public_subnet_cidrs
