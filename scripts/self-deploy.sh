@@ -204,7 +204,7 @@ cat > "${POLICY_DIR}/infra.json" <<'POLICY'
         "iam:TagRole","iam:UntagRole","iam:TagPolicy","iam:UntagPolicy",
         "iam:CreateOpenIDConnectProvider","iam:DeleteOpenIDConnectProvider",
         "iam:GetOpenIDConnectProvider","iam:ListOpenIDConnectProviders",
-        "iam:TagOpenIDConnectProvider"
+        "iam:TagOpenIDConnectProvider","iam:UntagOpenIDConnectProvider"
       ], "Resource": "*" },
     { "Sid": "IAMPassRole", "Effect": "Allow", "Action": "iam:PassRole",
       "Resource": "arn:aws:iam::ACCOUNT_ID:role/*",
@@ -259,7 +259,7 @@ cat > "${POLICY_DIR}/cicd.json" <<'POLICY'
         "route53:*",
         "acm:RequestCertificate","acm:DescribeCertificate","acm:DeleteCertificate",
         "acm:GetCertificate","acm:ListCertificates","acm:ListTagsForCertificate",
-        "acm:AddTagsToCertificate"
+        "acm:AddTagsToCertificate","acm:RemoveTagsFromCertificate"
       ], "Resource": "*" },
     { "Sid": "Observability", "Effect": "Allow", "Action": [
         "logs:CreateLogGroup","logs:DeleteLogGroup",
