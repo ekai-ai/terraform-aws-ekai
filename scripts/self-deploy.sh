@@ -469,14 +469,22 @@ if [[ ! "${CONFIRM}" =~ ^[Yy]$ ]]; then
 fi
 
 echo "==> Waiting for the new IAM key to propagate..."
+KEY_PROPAGATED=0
 for i in $(seq 1 10); do
   if AWS_ACCESS_KEY_ID="${TF_AWS_ACCESS_KEY_ID}" AWS_SECRET_ACCESS_KEY="${TF_AWS_SECRET_ACCESS_KEY}" \
      aws sts get-caller-identity >/dev/null 2>&1; then
     echo "✓ Key is active."
+    KEY_PROPAGATED=1
     break
   fi
   sleep 3
 done
+if [[ "${KEY_PROPAGATED}" -eq 0 ]]; then
+  echo "⚠ Key still not accepted after 30s -- proceeding anyway, but the"
+  echo "  upcoming terraform apply may fail with InvalidClientTokenId/"
+  echo "  SignatureDoesNotMatch if it's genuinely not propagated yet. Safe to"
+  echo "  just re-run this script if that happens."
+fi
 export AWS_ACCESS_KEY_ID="${TF_AWS_ACCESS_KEY_ID}"
 export AWS_SECRET_ACCESS_KEY="${TF_AWS_SECRET_ACCESS_KEY}"
 

@@ -122,11 +122,18 @@ for OLD_KEY in "${EXISTING_KEYS[@]}"; do
   aws iam update-access-key --user-name "${USER_NAME}" --access-key-id "${OLD_KEY}" --status Inactive
 done
 echo "    Waiting for the new key to propagate..."
+KEY_PROPAGATED=0
 for i in $(seq 1 10); do
   AWS_ACCESS_KEY_ID="${TF_AWS_ACCESS_KEY_ID}" AWS_SECRET_ACCESS_KEY="${TF_AWS_SECRET_ACCESS_KEY}" \
-    aws sts get-caller-identity >/dev/null 2>&1 && { echo "    ✓ Key is active."; break; }
+    aws sts get-caller-identity >/dev/null 2>&1 && { echo "    ✓ Key is active."; KEY_PROPAGATED=1; break; }
   sleep 3
 done
+if [[ "${KEY_PROPAGATED}" -eq 0 ]]; then
+  echo "    ⚠ Key still not accepted after 30s -- proceeding anyway, but the"
+  echo "      upcoming terraform destroy may fail with InvalidClientTokenId/"
+  echo "      SignatureDoesNotMatch if it's genuinely not propagated yet. Safe"
+  echo "      to just re-run this script if that happens."
+fi
 
 # Save whatever credential env vars the operator's own shell already had (if
 # any) so Section 5 below can restore them -- ekai-terraform-policy-infra/-cicd
