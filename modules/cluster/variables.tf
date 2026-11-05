@@ -32,6 +32,14 @@ variable "mode_max_size" {
 variable "node_instance" {
   description = "EC2 instance type for worker nodes (e.g., c5.large)"
   type        = string
+
+  validation {
+    condition = (
+      can(regex("^[a-z]+[0-9]+g[a-z]*\\.", lower(var.node_instance)))
+      == contains(["AL2023_ARM_64_STANDARD", "AL2_ARM_64", "BOTTLEROCKET_ARM_64", "BOTTLEROCKET_ARM_64_NVIDIA"], var.node_ami_type)
+    )
+    error_message = "node_instance's CPU architecture must match node_ami_type -- a Graviton (ARM) instance type (e.g. t4g.large, c7g.xlarge) needs an ARM node_ami_type (AL2023_ARM_64_STANDARD, AL2_ARM_64, BOTTLEROCKET_ARM_64, BOTTLEROCKET_ARM_64_NVIDIA); any other instance type needs an x86_64 node_ami_type."
+  }
 }
 
 variable "node_ami_type" {
