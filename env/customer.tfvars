@@ -89,7 +89,10 @@ rds_storage_type = "gp2"
 # manage_dns_zone = true  → Terraform creates the Route53 zone below.
 # A real client with their own domain already in Route53 would instead set
 # manage_dns_zone = false and provide route53_zone_id.
-dns_zone        = "customer.ekai.ai" # stand-in — a real client uses their own domain
+# REPLACE_ME is not a usable domain -- it's a loud placeholder, not a
+# stand-in value Terraform will silently accept and apply against. Set this
+# to the real domain (or subdomain) being deployed under before applying.
+dns_zone        = "REPLACE_ME"
 manage_dns_zone = true
 
 # ─── platform submodule ────────────────────────────────────────────────────────
