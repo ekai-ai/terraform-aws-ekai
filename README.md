@@ -6,42 +6,10 @@ EKS cluster, RDS (PostgreSQL), in-cluster Redis/Neo4j, ArgoCD, and the
 
 For how this repo is structured internally (why there are 2 Terraform
 applies, the module layout), see [ARCHITECTURE.md](ARCHITECTURE.md). This
-doc only covers deploying it.
-
-## Using this as a Terraform Registry module
-
-Already published:
-[registry.terraform.io/modules/ekai-ai/ekai/aws](https://registry.terraform.io/modules/ekai-ai/ekai/aws).
-**The published version can lag behind `main`** — publishing a new one
-needs its own semver tag pushed, a separate step from merging to `main`;
-check the Registry page's version/date against this repo's own commit
-history before assuming it's current.
-
-```hcl
-module "infra" {
-  source  = "registry.terraform.io/ekai-ai/ekai/aws"
-  version = "~> 0.1"
-
-  region = "us-east-1"
-  env    = "acme"
-  # ...every variable in variables.tf
-}
-
-module "cicd" {
-  source  = "registry.terraform.io/ekai-ai/ekai/aws//cicd"
-  version = "~> 0.1"
-  # ...every variable in cicd/variables.tf, plus the values module.infra
-  # exports that cicd needs (see examples/self-deploy/cicd/main.tf for
-  # exactly which — with a registry module you'd normally wire these with
-  # module.infra.X directly if both modules live in the same config, instead
-  # of examples/self-deploy's terraform_remote_state indirection, which only
-  # exists because self-deploy.sh's 2-apply split needs an actual state
-  # boundary between them)
-}
-```
-
-See [ARCHITECTURE.md](ARCHITECTURE.md) for why this is 2 separate applies
-and the full module layout.
+doc only covers deploying it. Prefer consuming it directly as a module
+instead of `self-deploy.sh`? See
+[Using this as a Terraform Registry module](#using-this-as-a-terraform-registry-module)
+below.
 
 ## Prerequisites
 
@@ -178,3 +146,38 @@ in the EC2 console (Service Quotas → Amazon EC2 → the relevant "Running
 On-Demand ... instances" quota — usually auto-approved within minutes), or
 lower `node_instance`/`node_min_size`/`mode_max_size` in that env's tfvars to
 fit the existing quota.
+
+## Using this as a Terraform Registry module
+
+Already published:
+[registry.terraform.io/modules/ekai-ai/ekai/aws](https://registry.terraform.io/modules/ekai-ai/ekai/aws).
+**The published version can lag behind `main`** — publishing a new one
+needs its own semver tag pushed, a separate step from merging to `main`;
+check the Registry page's version/date against this repo's own commit
+history before assuming it's current.
+
+```hcl
+module "infra" {
+  source  = "registry.terraform.io/ekai-ai/ekai/aws"
+  version = "~> 0.1"
+
+  region = "us-east-1"
+  env    = "acme"
+  # ...every variable in variables.tf
+}
+
+module "cicd" {
+  source  = "registry.terraform.io/ekai-ai/ekai/aws//cicd"
+  version = "~> 0.1"
+  # ...every variable in cicd/variables.tf, plus the values module.infra
+  # exports that cicd needs (see examples/self-deploy/cicd/main.tf for
+  # exactly which — with a registry module you'd normally wire these with
+  # module.infra.X directly if both modules live in the same config, instead
+  # of examples/self-deploy's terraform_remote_state indirection, which only
+  # exists because self-deploy.sh's 2-apply split needs an actual state
+  # boundary between them)
+}
+```
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for why this is 2 separate applies
+and the full module layout.
