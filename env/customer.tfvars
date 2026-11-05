@@ -64,7 +64,7 @@ private_subnet_cidrs = ["172.16.12.0/26", "172.16.14.0/26", "172.16.15.0/26"] # 
 node_min_size = "4"
 mode_max_size = "6"
 # EC2 instance type for worker nodes. Needs enough CPU/memory for the whole
-# app stack (backend/frontend/erd/workers/semantics/profile) plus Neo4j,
+# app stack (backend/frontend/erd/workers/profile) plus Neo4j,
 # Redis, and cluster addons (ALB controller, ESO, CloudWatch, GuardDuty) —
 # c5.xlarge (4 vCPU/8GB) ran out of memory once erd + erd-worker(x3) +
 # profile-worker(x2) + document-worker all landed on the same node (they

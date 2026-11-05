@@ -389,13 +389,9 @@ else
   read -rsp "Backend DB password (blank = auto-generate): " BACKEND_DB_PW; echo
   [[ -z "${BACKEND_DB_PW}" ]] && BACKEND_DB_PW=$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 24)
 
-  read -rsp "Semantics DB password (blank = auto-generate): " SEMANTICS_DB_PW; echo
-  [[ -z "${SEMANTICS_DB_PW}" ]] && SEMANTICS_DB_PW=$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 24)
-
   {
     echo "argocd_admin_password_plain=${ARGOCD_PW}"
     echo "backend_db_password=${BACKEND_DB_PW}"
-    echo "semantics_db_password=${SEMANTICS_DB_PW}"
   } >> "${SECRETS_FILE}"
 
   echo "==> Updating argocd_admin_password_hashed in ${TFVARS}..."
@@ -422,10 +418,8 @@ else
       --region "${REGION}" \
       --secret-string "$(jq -n \
         --arg bu "ekai_backend" --arg bp "${BACKEND_DB_PW}" --arg bn "ekai_backend" \
-        --arg su "ekai_semantics" --arg sp "${SEMANTICS_DB_PW}" --arg sn "ekai_semantics" \
         --arg ap "${ARGOCD_PW}" \
         '{backend_db_username:$bu, backend_db_password:$bp, backend_db_name:$bn,
-          semantics_db_username:$su, semantics_db_password:$sp, semantics_db_name:$sn,
           argocd_admin_password: $ap,
           github_token:"EKAI-PROVIDES-THIS", github_username:"EKAI-PROVIDES-THIS", github_email:"EKAI-PROVIDES-THIS"}')" \
       >/dev/null
@@ -433,7 +427,7 @@ else
     echo "  fill in the real GitHub PAT before running terraform apply (needs repo, admin:repo_hook, workflow scopes)."
   fi
 
-  for SVC in ekai-backend ekai-erd ekai-semantics ekai-profile; do
+  for SVC in ekai-backend ekai-erd ekai-profile; do
     SNAME="${ENV}-${SVC}"
     if aws secretsmanager describe-secret --secret-id "${SNAME}" --region "${REGION}" >/dev/null 2>&1; then
       echo "==> ${SNAME} already exists — skipping."

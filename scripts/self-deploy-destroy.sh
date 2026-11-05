@@ -407,9 +407,9 @@ fi
 # rather than prompting about secrets that were never created.
 if [[ "${CICD_PROVIDER}" != "none" ]]; then
   echo
-  read -rp "Also delete the per-service secrets (${ENV}-ekai-backend/erd/semantics/profile)? [y/N] " CLEAN_SVC
+  read -rp "Also delete the per-service secrets (${ENV}-ekai-backend/erd/profile)? [y/N] " CLEAN_SVC
   if [[ "${CLEAN_SVC}" =~ ^[Yy]$ ]]; then
-    for SVC in ekai-backend ekai-erd ekai-semantics ekai-profile; do
+    for SVC in ekai-backend ekai-erd ekai-profile; do
       SNAME="${ENV}-${SVC}"
       if aws secretsmanager describe-secret --secret-id "${SNAME}" --region "${REGION}" >/dev/null 2>&1; then
         aws secretsmanager delete-secret --secret-id "${SNAME}" --region "${REGION}" --force-delete-without-recovery >/dev/null
