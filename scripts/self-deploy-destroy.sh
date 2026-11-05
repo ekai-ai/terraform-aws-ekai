@@ -66,7 +66,7 @@ if [[ ! -f "${TFVARS}" ]]; then
   echo
 fi
 
-for bin in aws terraform jq; do
+for bin in aws terraform jq kubectl; do
   command -v "$bin" >/dev/null 2>&1 || { echo "ERROR: '$bin' is required but not installed."; exit 1; }
 done
 
