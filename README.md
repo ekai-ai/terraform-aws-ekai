@@ -5,7 +5,7 @@ EKS cluster, RDS (PostgreSQL), in-cluster Redis/Neo4j, ArgoCD, and the
 `ekai-saas` Helm chart — everything needed for a working Ekai install.
 
 For how this repo is structured internally (why there are 2 Terraform
-applies, the module layout), see [ARCHITECTURE.md](ARCHITECTURE.md). This
+applies, the module layout), see [ARCHITECTURE.md](https://github.com/ekai-ai/terraform-aws-ekai/blob/main/ARCHITECTURE.md). This
 doc only covers deploying it. Prefer consuming it directly as a module
 instead of `self-deploy.sh`? See
 [Using this as a Terraform Registry module](#using-this-as-a-terraform-registry-module)
@@ -14,7 +14,7 @@ below.
 ## Prerequisites
 
 - [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html),
-  configured (`aws configure`) — see [PERMISSIONS.md](PERMISSIONS.md) for
+  configured (`aws configure`) — see [PERMISSIONS.md](https://github.com/ekai-ai/terraform-aws-ekai/blob/main/PERMISSIONS.md) for
   exactly what this identity needs
 - [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.9
 - `jq`, `htpasswd` (from `apache2-utils`/`httpd-tools`), `openssl`
@@ -169,5 +169,5 @@ module "cicd" {
 }
 ```
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for why this is 2 separate applies
+See [ARCHITECTURE.md](https://github.com/ekai-ai/terraform-aws-ekai/blob/main/ARCHITECTURE.md) for why this is 2 separate applies
 and the full module layout.
