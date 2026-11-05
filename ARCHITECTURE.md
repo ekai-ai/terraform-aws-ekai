@@ -47,11 +47,14 @@ up against), then in `examples/self-deploy/root/`.
 
 ## Using this as a Terraform Registry module
 
-The repo root and `cicd/` are structured as ordinary Terraform modules, so
-once this repo is connected to the Terraform Registry (a one-time manual
-step someone with access to the registry/repo settings has to do — publish
-the repo, then push a semver tag; **this does not work until that's been
-done**), you can consume them directly instead of using
+The repo root and `cicd/` are structured as ordinary Terraform modules, and
+this repo is already connected to the Terraform Registry:
+[registry.terraform.io/modules/ekai-ai/ekai/aws](https://registry.terraform.io/modules/ekai-ai/ekai/aws).
+**The published version can lag behind `main`** -- publishing a new one
+needs a new semver tag pushed (`git tag vX.Y.Z && git push origin vX.Y.Z`),
+a separate manual step from merging to `main`; check the Registry page's
+"Published" date/version against this repo's own commit history before
+assuming it's current. You can consume it directly instead of using
 `examples/self-deploy/`:
 
 ```hcl
