@@ -207,9 +207,6 @@ everything else lives in only one.
 | `ingress_class_name` | `"alb"` | Ingress controller class — only `"alb"` wires `shared_alb_name`/cert/subnets automatically |
 | `shared_alb_name` | `""` → `"ekai<env>-shared-alb"` | Name of the shared ALB the chart's Ingress creates |
 | `use_minio` | `false` | Use a MinIO/S3-compatible endpoint instead of real S3 — Terraform doesn't deploy MinIO either way, only makes sense if you run your own |
-| `claude_model` | `"claude-haiku-4-5-20251001"` | Claude model the semantics service uses |
-| `vector_embedding_model` | `"text-embedding-3-small"` | OpenAI embedding model for vector search |
-| `vector_embedding_batch_size` | `100` | Batch size for embedding generation |
 | `secret_recovery_window_days` | `0` | Recovery window before the app secret is permanently deleted after `terraform destroy` — `0` lets an immediate re-apply reuse the same name |
 | `secret_value_overrides` | `{}` | Map to override any individual key in the generated app secret |
 | `manifest_folder` | `"manifest-files"` | Folder in the `deployment-files` repo where K8s manifests live |

@@ -81,8 +81,8 @@ locals {
 # generated crypto keys, a real S3 bucket it also creates below, and safe
 # non-secret defaults verified end-to-end against a real running stack) is
 # filled in for real — the app needs to actually work for the client, not
-# just boot. LLM keys/Cognito/GitHub App/Document AI are left blank ("") --
-# out of scope for this pass, same as GitHub sync. The only values that
+# just boot. GitHub App details are left blank ("") -- out of scope for
+# this pass, same as GitHub sync. The only values that
 # genuinely require the client's own external account and are needed for
 # the app to function out of the box are an IAM user with S3/SES access,
 # left as "REPLACE_ME". Update those after apply with (see the

@@ -15,7 +15,7 @@ output "ekai_files_bucket" {
 }
 
 output "customer_secret_arn" {
-  description = "ARN of the customer application secret Terraform created (cicd_provider = \"none\" only) — edit this to fill in the REPLACE_ME placeholders (LLM API keys, Cognito, SES/S3 IAM user, etc.)."
+  description = "ARN of the customer application secret Terraform created (cicd_provider = \"none\" only) — edit this to fill in the REPLACE_ME placeholders (AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY/AWS_SES_FROM_EMAIL, for S3/SES access)."
   value       = module.cicd.customer_secret_arn
 }
 
