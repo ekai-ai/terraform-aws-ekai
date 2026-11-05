@@ -14,10 +14,16 @@
 # state instead of 3 separate ones.
 # ──────────────────────────────────────────────────────────────────────────────
 
+# Resolved directly via STS rather than read from the state this data source
+# is itself about to open -- the bucket name needs the account ID before it
+# can find that state at all (S3 bucket names are globally unique across
+# every AWS account, not just this one -- see init-state-backend.sh).
+data "aws_caller_identity" "current" {}
+
 data "terraform_remote_state" "combined" {
   backend = "s3"
   config = {
-    bucket  = "ekai-terraform-state-${var.env}-${var.region}"
+    bucket  = "ekai-terraform-state-${var.env}-${var.region}-${data.aws_caller_identity.current.account_id}"
     key     = "${var.env}/combined.tfstate"
     region  = var.region
     encrypt = true

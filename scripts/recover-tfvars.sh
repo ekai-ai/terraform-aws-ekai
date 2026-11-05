@@ -11,8 +11,10 @@
 #
 # What it does:
 #   1. Reads the env's combined.tfstate directly from its S3 state bucket
-#      (ekai-terraform-state-<ENV>-<REGION>) -- if that bucket is gone too,
-#      there's nothing left to recover from and this can't help.
+#      (ekai-terraform-state-<ENV>-<REGION>-<ACCOUNT_ID>, account ID
+#      resolved via `aws sts get-caller-identity` for whichever identity is
+#      currently authenticated) -- if that bucket is gone too, there's
+#      nothing left to recover from and this can't help.
 #   2. Pulls the one value that can't just come from env/customer.tfvars's
 #      own defaults: dns_zone -- region and env are already known from the
 #      arguments above, and everything else in the template (node size,
@@ -33,7 +35,8 @@ ENV="${1:?Usage: $0 <ENV> <REGION>}"
 REGION="${2:?Usage: $0 <ENV> <REGION>}"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BUCKET="ekai-terraform-state-${ENV}-${REGION}"
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+BUCKET="ekai-terraform-state-${ENV}-${REGION}-${ACCOUNT_ID}"
 STATE_FILE="/tmp/${ENV}-combined.tfstate"
 
 echo "==> Fetching s3://${BUCKET}/${ENV}/combined.tfstate ..."

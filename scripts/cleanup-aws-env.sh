@@ -37,7 +37,8 @@ if [[ -f "${TFVARS}" ]]; then
   [[ -n "${FOUND}" ]] && ENV_PREFIX="${FOUND}"
 fi
 
-BUCKET="ekai-terraform-state-${ENV_PREFIX}-${REGION}"
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+BUCKET="ekai-terraform-state-${ENV_PREFIX}-${REGION}-${ACCOUNT_ID}"
 
 if [ "$AUTO_YES" != "--yes" ]; then
   echo "WARNING: This will permanently delete:"

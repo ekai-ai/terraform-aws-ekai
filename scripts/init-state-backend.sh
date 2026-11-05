@@ -6,8 +6,12 @@
 #
 # What it does:
 #   1. Reads region from env/<ENV>.tfvars
-#   2. Creates (or verifies) an S3 bucket: ekai-terraform-state-<ENV>-<REGION>
-#      with versioning + AES256 encryption + public-access block
+#   2. Creates (or verifies) an S3 bucket:
+#      ekai-terraform-state-<ENV>-<REGION>-<ACCOUNT_ID>
+#      with versioning + AES256 encryption + public-access block. The
+#      account ID suffix matters because S3 bucket names are globally
+#      unique across every AWS account, not just within this one -- without
+#      it, two different customers picking the same env/region collide.
 #   3. Writes TWO backend config files, one per state-holding root config
 #      (down from the original 4 layers, but not all the way to 1 — see
 #      cicd/main.tf's file header for why the cicd apply has to stay
@@ -49,14 +53,17 @@ fi
 # filename), e.g. env/umar.tfvars containing env = "umar-test". Used below
 # for both the bucket name and the state key, so it always matches what
 # cicd/main.tf's own data "terraform_remote_state" "combined" block computes
-# ("ekai-terraform-state-${var.env}-${var.region}") -- that data source has
-# no access to this script's ENV argument, only to var.env.
+# ("ekai-terraform-state-${var.env}-${var.region}-${data.aws_caller_identity.current.account_id}")
+# -- that data source has no access to this script's ENV argument, only to
+# var.env (and resolves the account ID itself via aws_caller_identity, the
+# same way this script resolves it via `aws sts get-caller-identity` below).
 ENV_PREFIX=$(grep -E '^env\s*=' "${TFVARS}" | head -1 | sed 's/.*=\s*"\(.*\)".*/\1/')
 if [[ -z "${ENV_PREFIX}" ]]; then
   ENV_PREFIX="${ENV}"
 fi
 
-BUCKET="ekai-terraform-state-${ENV_PREFIX}-${REGION}"
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+BUCKET="ekai-terraform-state-${ENV_PREFIX}-${REGION}-${ACCOUNT_ID}"
 echo "==> State bucket: ${BUCKET} (region: ${REGION})"
 
 # ── Create or verify S3 bucket ────────────────────────────────────────────────
@@ -64,15 +71,34 @@ if aws s3api head-bucket --bucket "${BUCKET}" --region "${REGION}" 2>/dev/null; 
   echo "==> Bucket already exists — skipping creation."
 else
   echo "==> Creating bucket..."
-  if [[ "${REGION}" == "us-east-1" ]]; then
-    aws s3api create-bucket \
-      --bucket "${BUCKET}" \
-      --region "${REGION}"
-  else
-    aws s3api create-bucket \
-      --bucket "${BUCKET}" \
-      --region "${REGION}" \
-      --create-bucket-configuration LocationConstraint="${REGION}"
+  # A same-day destroy-then-redeploy of the same env hits this bucket name
+  # again within minutes of its deletion -- S3 can still be finishing that
+  # delete internally and rejects the recreate with a transient
+  # "OperationAborted: A conflicting conditional operation is currently in
+  # progress against this resource" for up to a couple of minutes. Retry
+  # specifically on that error; anything else (e.g. a real name collision
+  # with another AWS account) fails immediately instead of retrying 5 times
+  # for nothing.
+  for attempt in $(seq 1 5); do
+    CREATE_ERR=$(
+      if [[ "${REGION}" == "us-east-1" ]]; then
+        aws s3api create-bucket --bucket "${BUCKET}" --region "${REGION}" 2>&1
+      else
+        aws s3api create-bucket --bucket "${BUCKET}" --region "${REGION}" \
+          --create-bucket-configuration LocationConstraint="${REGION}" 2>&1
+      fi
+    ) && { CREATE_ERR=""; break; }
+    if ! echo "${CREATE_ERR}" | grep -q "OperationAborted"; then
+      echo "${CREATE_ERR}" >&2
+      exit 1
+    fi
+    echo "==> Bucket recently deleted and still settling (OperationAborted) -- retrying in 15s (attempt ${attempt}/5)..."
+    sleep 15
+  done
+  if [[ -n "${CREATE_ERR}" ]]; then
+    echo "${CREATE_ERR}" >&2
+    echo "ERROR: bucket still not creatable after 5 attempts -- try again in a minute." >&2
+    exit 1
   fi
 fi
 
