@@ -131,3 +131,14 @@ aws sts get-caller-identity   # should succeed and show your real identity
 ```
 
 Then re-run `self-deploy.sh`.
+
+**`VcpuLimitExceeded` / node group stuck creating, or the EKS managed node
+group's underlying Auto Scaling Group shows an `InsufficientInstanceCapacity`/
+quota-related scaling error** — a fresh AWS account's default "Running
+On-Demand Standard (A, C, D, H, I, M, R, T, Z) instances" vCPU quota is often
+far smaller than this stack's default node sizing needs (every node counts
+against it, system and app node groups together). Request a quota increase
+in the EC2 console (Service Quotas → Amazon EC2 → the relevant "Running
+On-Demand ... instances" quota — usually auto-approved within minutes), or
+lower `node_instance`/`node_min_size`/`mode_max_size` in that env's tfvars to
+fit the existing quota.
