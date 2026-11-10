@@ -75,9 +75,9 @@ done
 # under set -e before the checks on the next lines ever run -- cicd_provider
 # in particular is routinely absent (self-service tfvars leave it unset,
 # defaulting to "none" below).
-REGION=$(grep -E '^region\s*=' "${TFVARS}" | head -1 | sed 's/.*=\s*"\(.*\)".*/\1/' || true)
+REGION=$(grep -E '^region[[:space:]]*=' "${TFVARS}" | head -1 | sed 's/.*=[[:space:]]*"\(.*\)".*/\1/' || true)
 [[ -z "${REGION}" ]] && { echo "ERROR: could not read 'region' from ${TFVARS}"; exit 1; }
-CICD_PROVIDER=$(grep -E '^cicd_provider\s*=' "${TFVARS}" | head -1 | sed 's/.*=\s*"\(.*\)".*/\1/' || true)
+CICD_PROVIDER=$(grep -E '^cicd_provider[[:space:]]*=' "${TFVARS}" | head -1 | sed 's/.*=[[:space:]]*"\(.*\)".*/\1/' || true)
 [[ -z "${CICD_PROVIDER}" ]] && CICD_PROVIDER="none"
 
 echo "════════════════════════════════════════════════════════════════"

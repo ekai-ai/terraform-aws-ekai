@@ -33,7 +33,7 @@ AUTO_YES="${3:-}"
 ENV_PREFIX="${ENV}"
 TFVARS="${REPO_ROOT}/env/${ENV}.tfvars"
 if [[ -f "${TFVARS}" ]]; then
-  FOUND=$(grep -E '^env\s*=' "${TFVARS}" | head -1 | sed 's/.*=\s*"\(.*\)".*/\1/' || true)
+  FOUND=$(grep -E '^env[[:space:]]*=' "${TFVARS}" | head -1 | sed 's/.*=[[:space:]]*"\(.*\)".*/\1/' || true)
   [[ -n "${FOUND}" ]] && ENV_PREFIX="${FOUND}"
 fi
 

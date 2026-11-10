@@ -78,11 +78,11 @@ echo " Ekai AWS self-deploy — environment: ${ENV}"
 echo "════════════════════════════════════════════════════════════════"
 echo
 
-REGION=$(grep -E '^region\s*=' "${TFVARS}" | head -1 | sed 's/.*=\s*"\(.*\)".*/\1/')
+REGION=$(grep -E '^region[[:space:]]*=' "${TFVARS}" | head -1 | sed 's/.*=[[:space:]]*"\(.*\)".*/\1/')
 [[ -z "${REGION}" ]] && { echo "ERROR: could not read 'region' from ${TFVARS}"; exit 1; }
 echo "==> Region: ${REGION}"
 
-CICD_PROVIDER=$(grep -E '^cicd_provider\s*=' "${TFVARS}" | head -1 | sed 's/.*=\s*"\(.*\)".*/\1/')
+CICD_PROVIDER=$(grep -E '^cicd_provider[[:space:]]*=' "${TFVARS}" | head -1 | sed 's/.*=[[:space:]]*"\(.*\)".*/\1/')
 if [[ "${CICD_PROVIDER}" == "none" ]]; then
   echo "==> cicd_provider = \"none\" (self-service) — the cluster/platform"
   echo "    submodules generate RDS/ArgoCD credentials directly, no master secret needed."
@@ -519,9 +519,9 @@ terraform init -upgrade -reconfigure -backend-config="../../../env/backend-${ENV
 # is already done/propagating, so its cert validation succeeds on its own
 # same as it always does. Same class of issue GCP's self-deploy.sh checks
 # for (cert-manager's ACME challenge).
-MANAGE_DNS_ZONE=$(grep -E '^manage_dns_zone\s*=' "${TFVARS}" | head -1 | sed 's/.*=\s*\(true\|false\).*/\1/')
+MANAGE_DNS_ZONE=$(grep -E '^manage_dns_zone[[:space:]]*=' "${TFVARS}" | head -1 | sed 's/.*=[[:space:]]*\(true\|false\).*/\1/')
 if [[ "${MANAGE_DNS_ZONE}" == "true" ]]; then
-  DNS_ZONE=$(grep -E '^dns_zone\s*=' "${TFVARS}" | head -1 | sed 's/.*=\s*"\(.*\)".*/\1/')
+  DNS_ZONE=$(grep -E '^dns_zone[[:space:]]*=' "${TFVARS}" | head -1 | sed 's/.*=[[:space:]]*"\(.*\)".*/\1/')
   echo "==> Creating the Route53 zone for ${DNS_ZONE} first (needed before delegation can happen)..."
   terraform apply -auto-approve -compact-warnings \
     -target=module.infra.module.bootstrap.aws_route53_zone.main \
