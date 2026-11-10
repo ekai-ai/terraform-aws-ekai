@@ -293,8 +293,8 @@ cat > "${POLICY_DIR}/cicd.json" <<'POLICY'
 }
 POLICY
 
-sed -i "s/ACCOUNT_ID/${ACCOUNT_ID}/g" "${POLICY_DIR}/infra.json"
-sed -i "s/ACCOUNT_ID/${ACCOUNT_ID}/g; s/ENV_NAME/${ENV}/g" "${POLICY_DIR}/cicd.json"
+sed -i.bak "s/ACCOUNT_ID/${ACCOUNT_ID}/g" "${POLICY_DIR}/infra.json" && rm -f "${POLICY_DIR}/infra.json.bak"
+sed -i.bak "s/ACCOUNT_ID/${ACCOUNT_ID}/g; s/ENV_NAME/${ENV}/g" "${POLICY_DIR}/cicd.json" && rm -f "${POLICY_DIR}/cicd.json.bak"
 
 # "Already exists" alone isn't enough to skip -- this script's own embedded
 # policy documents change over time (e.g. a missing action discovered later),
@@ -395,7 +395,7 @@ else
   } >> "${SECRETS_FILE}"
 
   echo "==> Updating argocd_admin_password_hashed in ${TFVARS}..."
-  sed -i "s|^argocd_admin_password_hashed.*|argocd_admin_password_hashed = \"${ARGOCD_HASH}\"|" "${TFVARS}"
+  sed -i.bak "s|^argocd_admin_password_hashed.*|argocd_admin_password_hashed = \"${ARGOCD_HASH}\"|" "${TFVARS}" && rm -f "${TFVARS}.bak"
 fi
 echo
 
