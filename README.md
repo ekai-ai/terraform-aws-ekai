@@ -65,33 +65,8 @@ confirmation (it creates real, billable AWS resources).
 
 ## After a successful deploy
 
-The customer secret (`ekai-customer` in AWS Secrets Manager by default —
-see `customer_secret_name` in `env/customer.tfvars`) ships with
-`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/`AWS_SES_FROM_EMAIL` set to
-`REPLACE_ME` — the app needs real values for these to send signup invite
-emails. Fill them in with one command — replace the `...` values below
-with real ones (an IAM user with S3/SES access, matching
-`terraform output -C examples/self-deploy/cicd client_iam_policy_for_secret_placeholders`,
-if one doesn't exist yet):
-
-```bash
-aws secretsmanager put-secret-value \
-  --secret-id ekai-customer \
-  --region <your region> \
-  --secret-string "$(aws secretsmanager get-secret-value --secret-id ekai-customer --region <your region> --query SecretString --output text | jq '
-    .AWS_ACCESS_KEY_ID = "..." |
-    .AWS_SECRET_ACCESS_KEY = "..." |
-    .AWS_SES_FROM_EMAIL = "..."
-  ')"
-```
-
-These three alone unblock the invite-email flow. The app picks up the new
-secret automatically within about a minute (ESO syncs it into the cluster,
-Reloader restarts the affected pods) — no `terraform apply` needed for
-this step.
-
-Optional — check the ArgoCD URL/password, Route53 nameservers, portal URL,
-and customer secret's ARN:
+Check the ArgoCD URL/password, Route53 nameservers, portal URL, and
+customer secret's ARN:
 
 ```bash
 terraform output -C examples/self-deploy/root
