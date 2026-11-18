@@ -55,7 +55,6 @@ module "cicd" {
   erd_efs_access_point_id     = data.terraform_remote_state.combined.outputs.erd_workspace_efs_access_point_id
   ingress_class_name          = var.ingress_class_name
   shared_alb_name             = var.shared_alb_name
-  use_minio                   = var.use_minio
   secret_recovery_window_days = var.secret_recovery_window_days
   secret_value_overrides      = var.secret_value_overrides
   manifest_folder             = var.manifest_folder
