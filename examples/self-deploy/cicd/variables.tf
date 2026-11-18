@@ -78,11 +78,6 @@ variable "shared_alb_name" {
   default     = ""
 }
 
-variable "use_minio" {
-  description = "Whether the app should use a MinIO/S3-compatible endpoint instead of real AWS S3 for file storage (cicd_provider = \"none\" only). Terraform does not deploy MinIO either way — true only makes sense if the client runs their own and fills MINIO_ENDPOINT_URL/MINIO_ACCESS_KEY/MINIO_SECRET_ACCESS_KEY via the secret-update CLI command afterward."
-  type        = bool
-  default     = false
-}
 
 
 variable "secret_recovery_window_days" {

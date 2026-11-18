@@ -118,11 +118,9 @@ resource "random_id" "internal_service_secret" {
   byte_length = 32
 }
 
-# Real S3 bucket for app file storage — created regardless of var.use_minio,
-# since it's cheap and gives a working AWS_ACCESS_KEY_ID/SECRET target even
-# if the client later switches to MinIO. Bucket names must be globally
-# unique across all of AWS, not just this account — account_id makes this
-# reliably so (02-cluster already exports it, no need for a second STS call).
+# Real S3 bucket for app file storage. Bucket names must be globally unique
+# across all of AWS, not just this account — account_id makes this reliably
+# so (02-cluster already exports it, no need for a second STS call).
 resource "aws_s3_bucket" "ekai_files" {
   count  = local.self_service ? 1 : 0
   bucket = "ekai-${var.env}-${var.aws_account_id}"
@@ -230,7 +228,7 @@ locals {
   safe_defaults = local.self_service ? {
     EKAI_BUCKET                 = aws_s3_bucket.ekai_files[0].id
     DECRYPTED_EKAI_TOKEN        = "EKAI@8008"
-    USE_MINIO                   = tostring(var.use_minio)
+    USE_MINIO                   = "false"
     AWS_REGION                  = var.region
     AWS_REGISTRY_REGION         = var.region
     AWS_ECR_REGISTRY            = var.existing_ecr_base_url
