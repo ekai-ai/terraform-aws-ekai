@@ -21,6 +21,41 @@ below.
 - A domain you can either delegate a subdomain of to Route53, or that
   already has a Route53 hosted zone
 
+## Network Requirements
+
+Only relevant if your VPC forces egress through a restrictive firewall (a
+centralized egress VPC, Transit Gateway or third-party appliance instead of a
+plain NAT gateway). Give this list to whoever manages that firewall before
+deploying — otherwise the EKS nodes never finish joining, or `terraform apply`
+hangs on a Helm release. Running `self-deploy.sh` from a machine *inside* that
+same restricted network? Then both lists apply to that one firewall, not just
+the cluster's.
+
+**Machine running `self-deploy.sh`:** `*.amazonaws.com` (every AWS API call
+Terraform and the AWS CLI make), `github.com`, `raw.githubusercontent.com`,
+`codeload.github.com`, `registry.terraform.io`, `releases.hashicorp.com`,
+`licensing.ekai.ai`, plus the Helm chart repos: `argoproj.github.io`,
+`aws.github.io`, `charts.external-secrets.io`, `stakater.github.io`,
+`kubernetes.github.io`, `kedacore.github.io`, `helm.neo4j.com`,
+`registry-1.docker.io`.
+
+**The EKS cluster (nodes + pods):**
+
+| Destination | Port | Why |
+| --- | --- | --- |
+| Cluster security group (itself) | TCP 443, TCP 10250, TCP+UDP 53 | AWS's documented minimum once the default allow-all outbound rule is removed ([source](https://docs.aws.amazon.com/eks/latest/userguide/sec-group-reqs.html)) |
+| `*.<region>.eks.amazonaws.com` | HTTPS 443 | Node registration and cluster introspection at launch |
+| `sts.amazonaws.com` | HTTPS 443 | IRSA — pods exchanging their ServiceAccount token for AWS credentials |
+| `api.ecr.<region>.amazonaws.com`, `*.dkr.ecr.<region>.amazonaws.com`, `s3.<region>.amazonaws.com` | HTTPS 443 | EKS add-on images (ECR layers are stored in S3) |
+| `quay.io`, `ghcr.io`, `registry.k8s.io`, `docker.io` | HTTPS 443 | Container images for ArgoCD, External Secrets/Reloader/KEDA, Cluster Autoscaler, and Redis/Neo4j respectively |
+| `public.ecr.aws` | HTTPS 443 | The `ekai-saas` Helm chart + every app image |
+| `licensing.ekai.ai` | HTTPS 443 | Backend pod's own runtime license checks (not just the installer) |
+| `api.github.com` | HTTPS 443 | GitHub code sync |
+
+Only if you fill in the optional AWS-SES placeholders in the customer
+secret: `email.<region>.amazonaws.com` (your own SES credentials) — skip
+if you leave those `REPLACE_ME`.
+
 ## Deploy
 
 ```bash
