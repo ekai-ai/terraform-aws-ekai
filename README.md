@@ -21,6 +21,66 @@ below.
 - A domain you can either delegate a subdomain of to Route53, or that
   already has a Route53 hosted zone
 
+## Network Requirements
+
+Only relevant if your VPC forces egress through a restrictive firewall
+(common once an account sits behind a centralized egress VPC, Transit
+Gateway, or third-party firewall appliance instead of a plain NAT gateway
+to the internet). Give this list to whoever manages that firewall before
+deploying — otherwise the EKS cluster and node group create successfully,
+but the nodes never finish joining, or `terraform apply` hangs on a Helm
+release with nothing pointing at the firewall as the cause. Running
+`self-deploy.sh` from a machine *inside* that same restricted network?
+Then both lists below apply to that one firewall, not just the cluster's.
+
+This list is researched from
+[AWS's own EKS security group documentation](https://docs.aws.amazon.com/eks/latest/userguide/sec-group-reqs.html)
+plus this repo's actual Terraform/Helm dependencies — unlike the Azure
+version of this section, it has not been live-fire-tested against a real
+restrictive firewall yet. Treat it as a solid starting point, not a
+guarantee.
+
+Also unlike Azure (nginx-ingress + cert-manager/Let's Encrypt), this repo
+terminates TLS with an AWS Application Load Balancer
+(`modules/alb_controller`) and an ACM certificate that's requested and
+DNS-validated entirely inside AWS (`modules/bootstrap`, via Route53) — no
+outbound ACME/Let's Encrypt call ever leaves the cluster.
+
+**Machine running `self-deploy.sh`/`terraform apply`:** every AWS API call
+Terraform and the AWS CLI make lands on a regional `*.amazonaws.com`
+endpoint (STS, IAM, EC2, EKS, ELB, RDS, EFS, Secrets Manager, Route 53,
+ACM, Auto Scaling, CloudWatch Logs, KMS) — AWS has no single management
+endpoint the way Azure has `management.azure.com`, so allow
+`*.amazonaws.com` rather than enumerating each service. Plus `github.com`,
+`raw.githubusercontent.com`, `codeload.github.com` (cloning this repo),
+`registry.terraform.io`, `releases.hashicorp.com` (Terraform itself and
+its providers), `licensing.ekai.ai`, plus the Helm chart repos `terraform
+apply` pulls directly: `argoproj.github.io` (ArgoCD), `aws.github.io`
+(AWS Load Balancer Controller), `charts.external-secrets.io` (ESO),
+`stakater.github.io` (Reloader), `kubernetes.github.io` (Cluster
+Autoscaler), `kedacore.github.io` (KEDA), `helm.neo4j.com` (Neo4j), and
+`registry-1.docker.io` (Bitnami Redis, pulled as an OCI chart).
+
+**The EKS cluster (nodes + pods):**
+
+| Destination | Port | Why |
+| --- | --- | --- |
+| Cluster security group (itself) | TCP 443, TCP 10250, TCP+UDP 53 | AWS's documented minimum once the default allow-all outbound rule is removed ([source](https://docs.aws.amazon.com/eks/latest/userguide/sec-group-reqs.html)) |
+| `*.<region>.eks.amazonaws.com` | HTTPS 443 | Node registration and cluster introspection at launch — AWS calls this out as required beyond the minimum rules above |
+| `sts.amazonaws.com` | HTTPS 443 | IRSA — every pod assuming a role via its ServiceAccount (ALB Controller, Cluster Autoscaler, EBS/EFS CSI drivers, ESO, app pods) exchanges its OIDC token for AWS credentials here |
+| `169.254.169.123` (link-local) | UDP 123 | Amazon Time Sync Service — built into every EC2 instance, needs no firewall rule at all (unlike AKS nodes, which need `UDP 123` to anywhere) |
+| `api.ecr.<region>.amazonaws.com`, `*.dkr.ecr.<region>.amazonaws.com` | HTTPS 443 | Pulling the VPC CNI, CoreDNS, kube-proxy, EBS/EFS CSI driver, and CloudWatch Observability EKS add-on images — all hosted in AWS's own per-region ECR account |
+| Amazon S3 (`s3.<region>.amazonaws.com`) | HTTPS 443 | ECR image layers are themselves stored in S3 — required to pull the add-on images above even though nothing in this stack uses S3 directly for its own images |
+| `registry-1.docker.io` | HTTPS 443 | Bitnami Redis's and the Neo4j chart's own container images (both un-mirrored, pulled straight from Docker Hub) |
+| `quay.io`, `ghcr.io`, `registry.k8s.io` | HTTPS 443 | Container images for ArgoCD, External Secrets Operator, Reloader, and Cluster Autoscaler/KEDA respectively |
+| `public.ecr.aws` | HTTPS 443 | The `ekai-saas` Helm chart (pulled by ArgoCD from inside the cluster) + every app image, plus the AWS Load Balancer Controller's own image |
+| `licensing.ekai.ai` | HTTPS 443 | Backend pod's own runtime license checks (not just the installer) |
+| `api.github.com` | HTTPS 443 | GitHub code sync |
+
+Only if you fill in the optional AWS-SES placeholders in the customer
+secret: `email.<region>.amazonaws.com` (your own SES credentials) — skip
+if you leave those `REPLACE_ME`.
+
 ## Deploy
 
 ```bash
