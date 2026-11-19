@@ -29,8 +29,7 @@ plain NAT gateway). Give this list to whoever manages that firewall before
 deploying — otherwise the EKS nodes never finish joining, or `terraform apply`
 hangs on a Helm release. Running `self-deploy.sh` from a machine *inside* that
 same restricted network? Then both lists apply to that one firewall, not just
-the cluster's. Derived from AWS's documentation and this repo's own
-dependencies; not yet tested against a real restrictive firewall.
+the cluster's.
 
 **Machine running `self-deploy.sh`:** `*.amazonaws.com` (every AWS API call
 Terraform and the AWS CLI make), `github.com`, `raw.githubusercontent.com`,
