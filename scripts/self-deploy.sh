@@ -485,6 +485,19 @@ export AWS_SECRET_ACCESS_KEY="${TF_AWS_SECRET_ACCESS_KEY}"
 echo "==> Initializing state backend..."
 "${SCRIPT_DIR}/init-state-backend.sh" "${ENV}"
 
+# One-time, idempotent: state written before the kubectl provider moved from
+# the unmaintained gavinbunney/kubectl to its maintained alekc/kubectl fork
+# still names the old provider. A no-op on already-migrated state. Skipped
+# when the state has no resources yet (a new env): state subcommands exit 1
+# with "No state file was found!" there, and set -e would end the script.
+# Run from the config directory, right after its terraform init.
+migrate_kubectl_provider() {
+  if [[ -n "$(terraform state list 2>/dev/null)" ]]; then
+    terraform state replace-provider -auto-approve \
+      registry.terraform.io/gavinbunney/kubectl registry.terraform.io/alekc/kubectl >/dev/null
+  fi
+}
+
 # 2 applies, in order: bootstrap+cluster+platform first (its state feeds
 # cicd's terraform_remote_state read — see cicd/main.tf's file header for why
 # cicd can't be folded into this same apply), then cicd. Both run from
@@ -497,6 +510,7 @@ echo
 echo "════════ terraform apply (bootstrap + cluster + platform) ════════"
 cd "${REPO_ROOT}/examples/self-deploy/root"
 terraform init -upgrade -reconfigure -backend-config="../../../env/backend-${ENV}.tfbackend"
+migrate_kubectl_provider
 
 # ── DNS delegation — only when Terraform is about to create a NEW Route53
 # zone. Delegating dns_zone to AWS's nameservers at your registrar/parent
@@ -576,6 +590,7 @@ echo
 echo "════════ terraform apply (cicd) ════════"
 cd "${REPO_ROOT}/examples/self-deploy/cicd"
 terraform init -upgrade -reconfigure -backend-config="../../../env/backend-${ENV}-cicd.tfbackend"
+migrate_kubectl_provider
 terraform apply -auto-approve -compact-warnings -var-file="../../../env/${ENV}.tfvars"
 
 echo
