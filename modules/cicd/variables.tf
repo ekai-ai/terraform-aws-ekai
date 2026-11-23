@@ -79,11 +79,6 @@ variable "shared_alb_name" {
   default     = ""
 }
 
-variable "use_minio" {
-  description = "Whether the app should use a MinIO/S3-compatible endpoint instead of real AWS S3 for file storage (cicd_provider = \"none\" only). Terraform does not deploy MinIO either way — true only makes sense if the client runs their own and fills MINIO_ENDPOINT_URL/MINIO_ACCESS_KEY/MINIO_SECRET_ACCESS_KEY via the secret-update CLI command afterward."
-  type        = bool
-  default     = false
-}
 
 variable "secret_recovery_window_days" {
   description = "Recovery window before the customer secret is permanently deleted after a `terraform destroy` (cicd_provider = \"none\" only). 0 = delete immediately, so a re-apply with the same customer_secret_name doesn't fail for up to 30 days. Raise this for extra accidental-deletion protection once past initial testing."

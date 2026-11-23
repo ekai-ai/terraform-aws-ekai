@@ -72,7 +72,6 @@ module "cicd" {
   enable_erd_efs              = var.enable_erd_efs
   ingress_class_name          = var.ingress_class_name
   shared_alb_name             = var.shared_alb_name
-  use_minio                   = var.use_minio
   secret_recovery_window_days = var.secret_recovery_window_days
   secret_value_overrides      = var.secret_value_overrides
   manifest_folder             = var.manifest_folder
