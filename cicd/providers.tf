@@ -23,7 +23,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 terraform {
-  required_version = ">= 1.5"
+  required_version = ">= 1.9"
 
   # No backend block here — this directory is a reusable Terraform module
   # (a second `module "cicd" { source = ... }` block for registry consumers,

@@ -15,7 +15,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 terraform {
-  required_version = ">= 1.5"
+  required_version = ">= 1.9"
 
   # Partial backend config — provide per-environment via -backend-config flag.
   # Example:
