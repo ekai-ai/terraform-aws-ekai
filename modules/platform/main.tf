@@ -12,7 +12,6 @@ check "argocd_password_provided_when_not_self_service" {
 
 locals {
   oidc_issuer         = var.oidc_issuer
-  oidc_provider_arn   = var.oidc_provider_arn
   public_subnet_ids   = var.public_subnet_ids
   vpc_id              = var.vpc_id
   ssl_certificate_arn = var.ssl_certificate_arn

@@ -203,11 +203,6 @@ variable "oidc_issuer" {
   type        = string
 }
 
-variable "oidc_provider_arn" {
-  description = "ARN of the IAM OIDC provider (sourced from the cluster submodule's output)"
-  type        = string
-}
-
 variable "public_subnet_ids" {
   description = "Public subnet IDs (sourced from the cluster submodule's output)"
   type        = list(string)

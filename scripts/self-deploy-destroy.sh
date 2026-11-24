@@ -395,7 +395,7 @@ echo "✓ Terraform infrastructure destroyed for env=${ENV}."
 # ── 3. Optional: S3 state bucket + ECR + CW logs + master secret ─────────────
 # For self-service (cicd_provider = "none"), only the state bucket is ever
 # actually created here -- ECR repos come from existing_ecr_base_url (an
-# existing public registry, create_ecr is never used), and the legacy
+# existing public registry; this repo never creates ECR repos), and the legacy
 # "${ENV}-ekai-db-credentials" master secret this step deletes was never
 # created either (self-deploy.sh's Step 3 skips it entirely for self-service).
 # The app's own secret (customer_secret_name, e.g. ekai-customer) is a

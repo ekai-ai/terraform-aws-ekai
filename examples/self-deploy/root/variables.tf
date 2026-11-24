@@ -178,11 +178,6 @@ variable "multi_az" {
   type        = bool
 }
 
-variable "cloudwatch_namespace" {
-  description = "Kubernetes namespace for the CloudWatch addon"
-  type        = string
-}
-
 variable "eks_public_access_cidrs" {
   description = "CIDRs allowed to reach the EKS public API endpoint"
   type        = list(string)

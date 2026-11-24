@@ -43,7 +43,6 @@ locals {
 module "bootstrap" {
   source = "./modules/bootstrap"
 
-  region               = var.region
   env                  = var.env
   dns_zone             = var.dns_zone
   manage_dns_zone      = var.manage_dns_zone
@@ -73,7 +72,6 @@ module "cluster" {
   allocated_storage       = var.allocated_storage
   backup_retention_period = var.backup_retention_period
   multi_az                = var.multi_az
-  cloudwatch_namespace    = var.cloudwatch_namespace
   secrets_name            = var.secrets_name
   cicd_provider           = var.cicd_provider
   eks_public_access_cidrs = var.eks_public_access_cidrs
@@ -122,7 +120,6 @@ module "platform" {
 
   # formerly `data "terraform_remote_state" "cluster"` / "bootstrap" in 03-platform/main.tf
   oidc_issuer         = module.cluster.oidc_issuer
-  oidc_provider_arn   = module.cluster.oidc_provider_arn
   public_subnet_ids   = module.cluster.public_subnet_ids
   private_subnet_ids  = module.cluster.private_subnet_ids
   vpc_id              = module.cluster.vpc_id

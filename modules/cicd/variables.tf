@@ -8,14 +8,8 @@ variable "env" {
   type        = string
 }
 
-variable "argocd_ingress_host" {
-  description = "ArgoCD server hostname — used by the ArgoCD Terraform provider to connect (e.g. argocd.client1.ekai.ai). Optional — defaults to \"argocd.<dns_zone>\" when omitted."
-  type        = string
-  default     = null
-}
-
 variable "dns_zone" {
-  description = "Base DNS zone for this environment (e.g. dev-eks.ekai.ai). Used to derive argocd_ingress_host, ekai_web_ingresshost, and per-service ingresshost when not explicitly set."
+  description = "Base DNS zone for this environment (e.g. dev-eks.ekai.ai). Used to derive per-service ingresshost when not explicitly set."
   type        = string
 }
 
@@ -172,38 +166,8 @@ variable "ekai_namespace" {
   type        = string
 }
 
-variable "ekai_web_branch" {
-  description = "Git branch for the Amplify frontend. Not functional in this distribution (modules/amplify_frontend not included) — a self-service client's frontend runs from the ekai-saas chart instead, doesn't need to set this."
-  type        = string
-  default     = ""
-}
-
-variable "ekai_web_ingresshost" {
-  description = "Ingress hostname for the frontend. Not functional in this distribution (modules/amplify_frontend not included). Optional — defaults to \"console.<dns_zone>\" when omitted."
-  type        = string
-  default     = null
-}
-
-variable "ekai_web_env" {
-  description = "Environment variables injected into the Amplify frontend build. Not functional in this distribution (modules/amplify_frontend not included)."
-  type        = map(string)
-  default     = {}
-}
-
-variable "create_github_oidc_provider" {
-  description = "Create the GitHub Actions OIDC provider in IAM. Not functional in this distribution (modules/github_actions_cicd not included)."
-  type        = bool
-  default     = true
-}
-
-variable "create_ecr" {
-  description = "When true, creates ECR repos for pipelines that have no ecr_repository_url. Not functional in this distribution (modules/code_build and modules/github_actions_cicd not included) — self-service always pulls from existing_ecr_base_url."
-  type        = bool
-  default     = true
-}
-
 variable "existing_ecr_base_url" {
-  description = "Used when create_ecr = false and a pipeline has no ecr_repository_url. Images are expected at <existing_ecr_base_url>/<env>-<service>. Example: 123456789.dkr.ecr.eu-central-1.amazonaws.com. Also the imageRegistry passed to the ekai-saas chart for cicd_provider = \"none\" -- there, the chart pulls each service from its own repo under this base, all under a shared \"ekai/\" namespace (e.g. \"<existing_ecr_base_url>/ekai/ekai-backend\")."
+  description = "Used when a pipeline has no ecr_repository_url. Images are expected at <existing_ecr_base_url>/<env>-<service>. Example: 123456789.dkr.ecr.eu-central-1.amazonaws.com. Also the imageRegistry passed to the ekai-saas chart for cicd_provider = \"none\" -- there, the chart pulls each service from its own repo under this base, all under a shared \"ekai/\" namespace (e.g. \"<existing_ecr_base_url>/ekai/ekai-backend\")."
   type        = string
   default     = null
 }

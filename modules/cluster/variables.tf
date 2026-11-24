@@ -85,11 +85,6 @@ variable "multi_az" {
   type        = bool
 }
 
-variable "cloudwatch_namespace" {
-  description = "Kubernetes namespace for the CloudWatch addon"
-  type        = string
-}
-
 variable "secrets_name" {
   description = "AWS Secrets Manager secret name containing DB credentials. Defaults to <env>-ekai-db-credentials. Ignored when cicd_provider = \"none\"."
   type        = string

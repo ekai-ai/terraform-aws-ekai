@@ -78,8 +78,6 @@ backup_retention_period = "7"  # days of automated backups
 db_instance_class       = "db.t3.medium"
 multi_az                = "true" # HA across 2 AZs -- roughly doubles RDS cost if true
 
-# K8s namespace for the CloudWatch Observability addon. Rarely needs changing.
-cloudwatch_namespace = "amazon-cloudwatch"
 # Check `aws rds describe-db-engine-versions --engine postgres` if this 400s
 # on apply — AWS periodically drops old minor versions from the supported list.
 engine_version   = "15.19"
@@ -107,7 +105,7 @@ enable_neo4j = true
 # ─── cicd/ (separate apply) — self-service mode ────────────────────────────────
 # cicd_provider = "none" is the entire point of this file: no CodeBuild, no
 # GitHub Actions, no Amplify — ArgoCD pulls the ekai-saas Helm chart
-# directly. None of pipelines/CD_branch/github_org/ekai_web_* apply here.
+# directly. None of pipelines/CD_branch/github_org apply here.
 cicd_provider = "none"
 
 ekai_namespace = "ekai-saas"

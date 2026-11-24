@@ -43,7 +43,6 @@ module "cicd" {
 
   region                      = var.region
   env                         = var.env
-  argocd_ingress_host         = var.argocd_ingress_host
   dns_zone                    = var.dns_zone
   secrets_name                = var.secrets_name
   customer_secret_name        = local.customer_secret_name
@@ -65,11 +64,6 @@ module "cicd" {
   CD_branch                   = var.CD_branch
   github_org                  = var.github_org
   ekai_namespace              = var.ekai_namespace
-  ekai_web_branch             = var.ekai_web_branch
-  ekai_web_ingresshost        = var.ekai_web_ingresshost
-  ekai_web_env                = var.ekai_web_env
-  create_github_oidc_provider = var.create_github_oidc_provider
-  create_ecr                  = var.create_ecr
   existing_ecr_base_url       = var.existing_ecr_base_url
 
   # formerly `data "terraform_remote_state" "cluster"` in the original

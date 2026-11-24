@@ -1,8 +1,3 @@
-variable "region" {
-  description = "AWS region (e.g. us-east-1). Must match the state bucket region."
-  type        = string
-}
-
 variable "env" {
   description = "Environment slug (e.g. client1, dev, prod). Used in tags and state key."
   type        = string
