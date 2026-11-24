@@ -56,8 +56,8 @@ terraform {
       version = "~> 2.16"
     }
     kubectl = {
-      source  = "gavinbunney/kubectl"
-      version = "~> 1.14"
+      source  = "alekc/kubectl"
+      version = "~> 3.0"
     }
     tls = {
       source  = "hashicorp/tls"
@@ -124,4 +124,9 @@ provider "kubectl" {
     args        = ["eks", "get-token", "--cluster-name", module.cluster.eks_cluster_name, "--region", var.region]
   }
   load_config_file = false
+  # host and CA come from the cluster this same apply creates, so they're
+  # unknown on a new env's first plan. alekc/kubectl v3 fails provider
+  # configure on that unless the client is built lazily (gavinbunney only
+  # logged a warning).
+  lazy_load = true
 }

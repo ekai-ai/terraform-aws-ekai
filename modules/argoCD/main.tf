@@ -70,7 +70,9 @@ resource "helm_release" "argocd_image_updater" {
 }
 
 # Mirrors the Azure argocd module pattern exactly.
-# force_conflicts = true takes ownership of ArgoCD's auto-created AppProject.
+# Managing ArgoCD's auto-created AppProject here takes ownership of it. No
+# force_conflicts: it only does anything with server_side_apply, and
+# alekc/kubectl v3 fails the plan if it's set without it.
 # Setting finalizers = [] ensures the finalizer is stripped on the APPLY pass
 # so the controller-managed finalizer is gone when destroy runs.
 resource "kubectl_manifest" "argocd_default_project" {
@@ -88,8 +90,7 @@ resource "kubectl_manifest" "argocd_default_project" {
       clusterResourceWhitelist = [{ group = "*", kind = "*" }]
     }
   })
-  force_conflicts = true
-  depends_on      = [helm_release.argocd]
+  depends_on = [helm_release.argocd]
 }
 
 # Destroy order (reversed from apply because of the depends_on chain):
