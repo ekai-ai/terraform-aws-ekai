@@ -39,11 +39,6 @@ output "oidc_issuer" {
   value       = module.eks.oidc_issuer
 }
 
-output "oidc_provider_arn" {
-  description = "ARN of the IAM OIDC provider (used by IRSA roles in 03-platform + 04-cicd)"
-  value       = aws_iam_openid_connect_provider.eks.arn
-}
-
 output "node_group_role_arn" {
   description = "ARN of the IAM role attached to worker nodes"
   value       = module.iam.NODE_GROUP_ROLE_ARN

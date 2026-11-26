@@ -15,7 +15,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 terraform {
-  required_version = ">= 1.5"
+  required_version = ">= 1.9"
 
   # Partial backend config — provide per-environment via -backend-config flag.
   # Example:
@@ -82,10 +82,5 @@ module "cicd" {
   CD_branch                   = var.CD_branch
   github_org                  = var.github_org
   ekai_namespace              = var.ekai_namespace
-  ekai_web_branch             = var.ekai_web_branch
-  ekai_web_ingresshost        = var.ekai_web_ingresshost
-  ekai_web_env                = var.ekai_web_env
-  create_github_oidc_provider = var.create_github_oidc_provider
-  create_ecr                  = var.create_ecr
   existing_ecr_base_url       = var.existing_ecr_base_url
 }

@@ -167,7 +167,6 @@ everything else lives in only one.
 | `allocated_storage` | — (required) | RDS allocated storage, GB |
 | `backup_retention_period` | — (required) | Days to retain automated RDS backups |
 | `multi_az` | — (required) | RDS Multi-AZ — roughly doubles cost when `true` |
-| `cloudwatch_namespace` | — (required) | Namespace for the CloudWatch Observability addon |
 | `eks_public_access_cidrs` | `["0.0.0.0/0"]` | CIDRs allowed to reach the EKS public API endpoint |
 
 ### Platform submodule (ALB controller, Cluster Autoscaler, ESO, Redis, Neo4j, ArgoCD, KEDA, Reloader)
@@ -217,7 +216,5 @@ everything else lives in only one.
 ### `cicd/variables.tf` — not functional in this distribution
 
 Declared (so `cicd_provider` still validates) but inert — their supporting
-modules (`code_build`, `github_actions_cicd`, `amplify_frontend`) aren't
-included here: `pipelines`, `CD_branch`, `github_org`, `ekai_web_branch`,
-`ekai_web_ingresshost`, `ekai_web_env`, `create_github_oidc_provider`,
-`create_ecr`.
+modules (`code_build`, `github_actions_cicd`) aren't included here:
+`pipelines`, `CD_branch`, `github_org`.

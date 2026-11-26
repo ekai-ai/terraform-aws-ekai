@@ -52,12 +52,8 @@ locals {
   # source_type == "git". No need to read them from anywhere.
   github_token        = local.self_service ? "" : local._secret["github_token"]
   github_username     = local.self_service ? "" : local._secret["github_username"]
-  github_email        = local.self_service ? "" : local._secret["github_email"]
   ssl_certificate_arn = var.ssl_certificate_arn
   route53_zone_id     = var.route53_zone_id
-
-  argocd_host = coalesce(var.argocd_ingress_host, "argocd.${var.dns_zone}")
-  web_host    = coalesce(var.ekai_web_ingresshost, "console.${var.dns_zone}")
 
   # cicd_provider = "none" only — referenced by self_service_helm_values,
   # wait_for_alb, and data.aws_lb.ekai_shared below; one source of truth

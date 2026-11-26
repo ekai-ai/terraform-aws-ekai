@@ -91,7 +91,6 @@ module "infra" {
   allocated_storage                = var.allocated_storage
   backup_retention_period          = var.backup_retention_period
   multi_az                         = var.multi_az
-  cloudwatch_namespace             = var.cloudwatch_namespace
   eks_public_access_cidrs          = var.eks_public_access_cidrs
   argocd_namespace                 = var.argocd_namespace
   argocd_admin_password_hashed     = var.argocd_admin_password_hashed
